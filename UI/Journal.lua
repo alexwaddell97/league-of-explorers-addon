@@ -28,6 +28,9 @@ J.HEAD = HEAD
 
 local sections, byId = {}, {}
 local frame, book, current
+local mframe -- the map look's window (see "The map look" below)
+local function mapOn() return ns.db and ns.db.settings.shell == "map" or false end
+J.MapOn = mapOn
 
 function J.Register(def)
 	table.insert(sections, def)
@@ -90,7 +93,11 @@ local function buildSettings(f)
 	end
 	local function refresh() s:GetScript("OnShow")() end
 
-	add(W.Label(s, "Preferences"))
+	-- The look: the book, or the map window.
+	add(W.Label(s, "Look"))
+	local lookSeg = add(W.Segments(s, function(key) J.SetShell(key) end), -8)
+	lookSeg:Rebuild({ { key = "book", label = "Book" }, { key = "map", label = "Map" } })
+	add(W.Label(s, "Preferences"), -14)
 	toggle("Solo mode", function() return ns.Solo() end, function(v)
 		ns.Guild.SetSolo(v)
 		refresh()
@@ -101,6 +108,7 @@ local function buildSettings(f)
 	toggle("Open and close like a book", function() return settings.bookAnim ~= false end, function(v)
 		settings.bookAnim = v
 	end)
+	items[#items].book = true -- only the book opens like one
 	toggle("Minimap button", function() return not settings.minimap.hide end, function(v)
 		settings.minimap.hide = not v
 		ns.Fire("MINIMAP_SETTING")
@@ -172,7 +180,7 @@ local function buildSettings(f)
 		local solo = ns.Solo()
 		local prev, h = nil, 14
 		for _, it in ipairs(items) do
-			local show = not (it.guild and solo)
+			local show = not (it.guild and solo) and not (it.book and mapOn())
 			it.w:SetShown(show)
 			if show then
 				it.w:ClearAllPoints()
@@ -191,6 +199,7 @@ local function buildSettings(f)
 
 	s:SetScript("OnShow", function()
 		layout()
+		lookSeg:Select(mapOn() and "map" or "book")
 		for _, t in ipairs(toggles) do t:Refresh() end
 		alertBtn:SetText("Rare alerts: " .. ns.Alerts.ModeLabel())
 		guild:SetText(ns.Solo() and "CHARACTERS" or "GUILD")
@@ -1105,6 +1114,7 @@ end
 -- Closes the book: the left half swings back over and lands shut, then
 -- the book fades.
 function J.Close()
+	if mapOn() then return J.CloseMap() end
 	if not (frame and frame:IsShown()) or closing then return end
 	if book.leaf:IsShown() and book.leaf.finish then book.leaf.finish() end
 	if frame.settings then frame.settings:Hide() end
@@ -1405,6 +1415,233 @@ local function turn(old, new)
 	end)
 end
 
+---------------------------------------------------------------------------
+-- The map look: the same pages in a window with the live map of where you
+-- are across the top, tabs under it, and the two pages as dark panels side
+-- by side (settings.shell = "map"; the book is the default). The pages'
+-- writing areas, with the title and page info, move between the two
+-- windows, so every page works in both.
+---------------------------------------------------------------------------
+local AREA_W, AREA_H = PAGE_W - 2 * INSET - 6, PAGE_H - 2 * INSET
+local M_EDGE, M_GAP, M_PAD = 8, 10, 14
+local M_BANNER, M_TAB = 100, 34
+local M_PANEL_W, M_PANEL_H = AREA_W + 2 * M_PAD, AREA_H + 2 * M_PAD
+local M_W = 2 * M_EDGE + 2 * M_PANEL_W + M_GAP
+local M_H = M_EDGE + M_BANNER + M_TAB + M_GAP + M_PANEL_H + M_EDGE
+local attached = "book"
+
+-- The map over the window: where you are, and how much of it you've explored.
+function J.UpdateBanner()
+	if not (mframe and mframe:IsShown()) then return end
+	local zone, focus = W.PlayerFocus()
+	local b = { kicker = "You are in" }
+	if zone then
+		mframe.banner:SetMap(zone, focus, true)
+		b.title = ns.MapName(zone) or ""
+		local n, total = ns.Exploration.Progress(zone)
+		local cont = ns.Exploration.ContinentOf(zone)
+		local rec = ns.Char() and ns.Char().zones[zone]
+		local done = rec and rec.full and true or false
+		if total and total > 0 then
+			b.sub = ("%s%d of %d areas explored"):format(cont and ((ns.MapName(cont) or "") .. "  /  ") or "", n, total)
+			b.dots = { n, total, done }
+			b.big = math.floor(n / total * 100 + 0.5) .. "%"
+			b.bigLabel = done and "fully explored" or "explored"
+			b.bigRole = done and "done" or "accent"
+		else
+			b.sub = cont and ns.MapName(cont) or ""
+		end
+	else
+		mframe.banner:SetMap(nil)
+		b.title = GetZoneText and GetZoneText() or ""
+	end
+	mframe.banner:SetHeadline(b)
+end
+
+-- The tabs: the pages there are in this mode.
+local function mapTabs()
+	local f = mframe
+	if f.tabs then f.tabs:Hide() end
+	local items = {}
+	for _, s in ipairs(shown()) do items[#items + 1] = { id = s.id, label = titleOf(s), icon = s.icon } end
+	f.tabs = W.Tabs(f.tabStrip, items, function(id) J.Show(id) end)
+	f.tabs:SetPoint("LEFT", 2, 0)
+	if current then f.tabs:Select(current.id) end
+end
+
+local function buildMap()
+	local f = CreateFrame("Frame", "LeagueOfExplorersMapWindow", UIParent)
+	mframe = f
+	f:SetSize(M_W, M_H)
+	f:SetFrameStrata("HIGH")
+	f:SetToplevel(true)
+	f:SetClampedToScreen(true)
+	f:SetMovable(true)
+	f:EnableMouse(true)
+	f:RegisterForDrag("LeftButton")
+	f:SetScript("OnDragStart", f.StartMoving)
+	f:SetScript("OnDragStop", function(self)
+		self:StopMovingOrSizing()
+		local point, _, _, x, y = self:GetPoint()
+		ns.db.settings.mapPos = { point = point, x = x, y = y }
+	end)
+	local pos = ns.db.settings.mapPos
+	if pos and pos.point then
+		f:SetPoint(pos.point, UIParent, pos.point, pos.x, pos.y)
+	else
+		f:SetPoint("CENTER", 0, 20)
+	end
+	f:Hide()
+	f:SetScript("OnShow", function(self)
+		sound("IG_CHARACTER_INFO_OPEN")
+		escape(true)
+		T.FadeIn(self, 0.18)
+	end)
+	f:SetScript("OnHide", function(self)
+		-- The whole interface hidden (not the window): nothing to do.
+		if self:IsShown() then return end
+		if frame and frame.settings then frame.settings:Hide() end
+		escape(false)
+		sound("IG_CHARACTER_INFO_CLOSE")
+	end)
+	-- The pin follows you while it's open.
+	local acc = 0
+	f:SetScript("OnUpdate", function(_, elapsed)
+		acc = acc + elapsed
+		if acc < 1 then return end
+		acc = 0
+		J.UpdateBanner()
+	end)
+
+	f.bg = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+	f.bg:SetAllPoints()
+	f.edge = T.Border(f, "windowEdge")
+
+	f.banner = W.MapBanner(f, M_W - 2 * M_EDGE, M_BANNER)
+	f.banner:SetPoint("TOPLEFT", M_EDGE, -M_EDGE)
+
+	f.tabStrip = CreateFrame("Frame", nil, f)
+	f.tabStrip:SetHeight(M_TAB)
+	f.tabStrip:SetPoint("TOPLEFT", f.banner, "BOTTOMLEFT")
+	f.tabStrip:SetPoint("TOPRIGHT", f.banner, "BOTTOMRIGHT")
+	f.tabBg = f.tabStrip:CreateTexture(nil, "BACKGROUND")
+	f.tabBg:SetAllPoints()
+	local tabLine = T.Line(f.tabStrip, false, "line")
+	tabLine:SetPoint("BOTTOMLEFT")
+	tabLine:SetPoint("BOTTOMRIGHT")
+	mapTabs()
+
+	-- The two pages, side by side.
+	f.panels = {}
+	for i = 1, 2 do
+		local p = W.Panel(f)
+		p:SetSize(M_PANEL_W, M_PANEL_H)
+		p:SetPoint("TOPLEFT", f.tabStrip, "BOTTOMLEFT", (i - 1) * (M_PANEL_W + M_GAP), -M_GAP)
+		f.panels[i] = p
+	end
+
+	-- Close, settings and the Ko-fi cup, over the map.
+	local top = f.banner:GetFrameLevel() + 20
+	f.close = W.RoundButton(f, 22, "close", function() J.Close() end)
+	f.close:SetPoint("TOPRIGHT", f.banner, "TOPRIGHT", -8, -8)
+	f.close:SetFrameLevel(top)
+	f.gear = W.RoundButton(f, 22, "Interface\\Icons\\INV_Misc_Gear_01", function()
+		frame.settings:SetShown(not frame.settings:IsShown())
+	end)
+	f.gear:SetPoint("RIGHT", f.close, "LEFT", -6, 0)
+	f.gear:SetFrameLevel(top)
+	f.gear:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+		GameTooltip:SetText("Settings")
+		GameTooltip:Show()
+	end)
+	f.gear:HookScript("OnLeave", function() GameTooltip:Hide() end)
+	if ns.Support then
+		f.kofi = ns.Support.Button(f)
+		f.kofi:SetPoint("RIGHT", f.gear, "LEFT", -4, 0)
+		f.kofi:SetFrameLevel(top)
+	end
+
+	T.OnTheme(function(look)
+		local w = look.window
+		f.bg:SetColorTexture(w[1], w[2], w[3], w[4] or 1)
+		local e = look.windowEdge
+		f.edge:SetColor(e[1], e[2], e[3], e[4])
+		T.Fill(f.tabBg, look.tabBar or { 1, 1, 1, 0.025 })
+	end)
+end
+
+-- Moves the pages' writing areas (and the settings) into the window in use.
+local function attach()
+	local want = mapOn() and "map" or "book"
+	if attached == want then return end
+	if want == "map" and not mframe then buildMap() end
+	for i, page in ipairs({ book.left, book.right }) do
+		local a = page.area
+		a:ClearAllPoints()
+		if want == "map" then
+			local p = mframe.panels[i]
+			a:SetParent(p)
+			a:SetFrameLevel(p:GetFrameLevel() + 2)
+			a:SetSize(AREA_W, AREA_H)
+			a:SetPoint("TOPLEFT", M_PAD, -M_PAD)
+		else
+			local L = i == 1
+			a:SetParent(page.inset)
+			a:SetFrameLevel(page.inset:GetFrameLevel() + 1)
+			a:SetPoint("TOPLEFT", INSET + (L and 0 or 6), -INSET)
+			a:SetPoint("BOTTOMRIGHT", -INSET - (L and 6 or 0), INSET)
+		end
+	end
+	local s = frame.settings
+	s:ClearAllPoints()
+	if want == "map" then
+		s:SetParent(mframe)
+		s:SetPoint("TOPRIGHT", mframe.gear, "BOTTOMRIGHT", 0, -6)
+		s:SetFrameLevel(mframe:GetFrameLevel() + 60)
+	else
+		s:SetParent(frame)
+		s:SetPoint("TOPRIGHT", book.right, "TOPRIGHT", -6, -30)
+		s:SetFrameLevel(frame:GetFrameLevel() + 60)
+	end
+	attached = want
+end
+
+local function showMap(s, before)
+	showOnly(s)
+	mframe.tabs:Select(s.id)
+	mframe:Show()
+	refresh(s)
+	J.UpdateBanner()
+	if before and before ~= s then
+		T.FadeIn(s.left, 0.2)
+		T.FadeIn(s.right, 0.2)
+	end
+end
+
+function J.CloseMap()
+	if not (mframe and mframe:IsShown()) then return end
+	if frame and frame.settings then frame.settings:Hide() end
+	mframe:Hide()
+end
+
+-- Book or map: closes one and opens the other on the same page.
+function J.SetShell(name)
+	if not ns.db or (ns.db.settings.shell or "book") == name then return end
+	local open = J.IsShown()
+	local settingsOpen = frame and frame.settings and frame.settings:IsShown()
+	if frame and frame:IsShown() then frame:Hide() end
+	if mframe and mframe:IsShown() then mframe:Hide() end
+	closing = false
+	ns.db.settings.shell = name ~= "book" and name or nil
+	T.Repaint()
+	ns.Fire("LOOK_CHANGED")
+	if open then
+		J.Show(current and current.id)
+		if settingsOpen then frame.settings:Show() end
+	end
+end
+
 function J.Show(id)
 	if not ns.db then return end
 	if not frame then build() end
@@ -1420,6 +1657,8 @@ function J.Show(id)
 		r:Rise(rid == s.id)
 		r:Paint()
 	end
+	attach()
+	if mapOn() then return showMap(s, before) end
 	local opening = not frame:IsShown()
 	-- Asked to open while it's closing: open again from where it is.
 	if closing and animOn() then J.PlayOpen() end
@@ -1432,7 +1671,7 @@ function J.Show(id)
 end
 
 function J.Toggle()
-	if frame and frame:IsShown() and not closing then
+	if J.IsShown() and not closing then
 		J.Close()
 	else
 		J.Show(ns.db.settings.page)
@@ -1440,13 +1679,13 @@ function J.Toggle()
 end
 
 function J.IsShown()
-	return frame and frame:IsShown()
+	return (frame and frame:IsShown()) or (mframe and mframe:IsShown()) or false
 end
 
 function J.Current() return current end
 
 -- The book itself (for cards laid over it).
-function J.Book() return book end
+function J.Book() return mapOn() and mframe or book end
 
 -- A section's two pages (for the demo, which sets what they show).
 function J.Pages(id)
@@ -1462,6 +1701,7 @@ local function refreshSoon()
 	ns.After(0.25, function()
 		pending = false
 		if J.IsShown() and current then refresh(current) end
+		J.UpdateBanner()
 	end)
 end
 J.RefreshSoon = refreshSoon
@@ -1472,11 +1712,20 @@ ns.Listen("ROSTER", refreshSoon)
 ns.Listen("MODE", function()
 	if not frame then return end
 	J.PlaceRibbons()
+	if mframe then mapTabs() end
 	if frame.settings and frame.settings:IsShown() then frame.settings:GetScript("OnShow")() end
 	if current and not available(current) then
-		if frame:IsShown() then J.Show(shown()[1].id) else current = nil end
-	elseif current and frame:IsShown() then
+		if J.IsShown() then J.Show(shown()[1].id) else current = nil end
+	elseif current and J.IsShown() then
 		showNow(current)
 	end
 end)
 ns.On("ZONE_CHANGED_NEW_AREA", refreshSoon)
+
+-- /loe look [book|map]: switch between the book and the map window.
+ns.Commands.look = function(rest)
+	local name = (rest or ""):lower()
+	if name ~= "book" and name ~= "map" then name = mapOn() and "book" or "map" end
+	J.SetShell(name)
+	ns.Print("look: " .. name)
+end

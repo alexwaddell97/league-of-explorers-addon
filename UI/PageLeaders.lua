@@ -149,7 +149,9 @@ local function build(left, right)
 	right.champions:SetSpacing(3)
 
 	right.help = W.Button(right, "How points and ranks work", 210, 24, function()
-		right.helpCard = right.helpCard or buildHelp(ns.Journal.Book())
+		-- Over the window in use (the book or the map look's).
+		local host = ns.Journal.Book()
+		if not right.helpCard or right.helpCard:GetParent() ~= host then right.helpCard = buildHelp(host) end
 		right.helpCard:Show()
 	end)
 	right.help:SetPoint("BOTTOMLEFT", 0, 0)

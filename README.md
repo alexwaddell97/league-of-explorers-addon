@@ -28,6 +28,8 @@ An exploration addon for World of Warcraft Forever. It tracks the zones you expl
 
 **Solo mode.** Turns the guild features off, for playing without a guild. It's in the settings, or `/loe solo`.
 
+**Two looks.** An open book, or a window with the live map of where you are across the top. Switch in the settings, or with `/loe look`.
+
 ## How it works
 
 Rares and treasures are picked up when they show on your minimap, show a nameplate, or you target or mouse over them. Forever doesn't give addons the full combat log, so a rare counts as killed when you loot it, or when you see it die after fighting it.
@@ -57,6 +59,7 @@ Type `/loe` to open it, or click the minimap button. `/loe demo` gives a tour wi
 | `/loe` | Open or close the window |
 | `/loe demo` | A tour of every page |
 | `/loe solo` | Switch between solo and guild mode |
+| `/loe look` | Switch between the book and the map look |
 | `/loe alerts` | Choose which guild rare sightings pop up |
 | `/loe toasts move` | Move the pop-ups |
 | `/loe officers` | Show or set which guild ranks are officers |

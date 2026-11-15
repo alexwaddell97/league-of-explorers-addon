@@ -294,6 +294,7 @@ local function help()
 	print("  /loe demo - a tour of the addon with an example guild")
 	print("  /loe alerts - choose which guild rare sightings pop up")
 	print("  /loe solo - switch between solo and guild mode")
+	print("  /loe look - switch between the book and the map look")
 	print("  /loe kofi - show the Ko-fi link")
 	print("  /loe debug - turn debug messages on or off")
 end

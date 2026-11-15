@@ -1144,5 +1144,28 @@ ok(not ns.Solo(), "/loe solo switches back to guild mode")
 ns.Journal.Toggle()
 tick(8)
 
+-- The map look: the same pages in the map window, closed by Escape and the
+-- toggle the same way; and back to the book, still open, on the same page.
+ns.Journal.SetShell("map")
+ok(ns.Theme.Look() == ns.Theme.LOOKS.map, "the map look's colours")
+ns.Journal.Show("bestiary")
+tick(2)
+local MW = _G.LeagueOfExplorersMapWindow
+ok(MW and MW:IsShown(), "the map window opens")
+ok(not _G.LeagueOfExplorersJournal:IsShown(), "and not the book")
+eq(ns.Journal.Current().id, "bestiary", "on the page asked for")
+ok(_G.LeagueOfExplorersJournalEscape:IsShown(), "Escape can close it")
+_G.LeagueOfExplorersJournalEscape:Hide()
+ok(not MW:IsShown(), "Escape closes the map window")
+ns.Journal.Toggle()
+ok(MW:IsShown(), "the toggle opens it again")
+ns.Journal.SetShell("book")
+tick(8)
+ok(_G.LeagueOfExplorersJournal:IsShown() and not MW:IsShown(), "back to the book, still open")
+eq(ns.Journal.Current().id, "bestiary", "on the same page")
+ok(ns.Theme.Look() == ns.Theme.LOOKS.explorer, "with the book's colours")
+ns.Journal.Toggle()
+tick(8)
+
 print(("%d checks, %d failures"):format(checks, failures))
 os.exit(failures == 0 and 0 or 1)

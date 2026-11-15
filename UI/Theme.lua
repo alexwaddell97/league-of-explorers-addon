@@ -53,7 +53,52 @@ T.LOOKS = {
 	},
 }
 
-function T.Look() return T.LOOKS.explorer end
+-- The map look: the earlier map-first design's dark slate, a turquoise
+-- accent and amber points, with the book's own parts given its colours.
+T.LOOKS.map = {
+	window     = { 0.050, 0.060, 0.070, 0.97 },
+	windowEdge = { 1, 1, 1, 0.09 },
+	tabBar     = { 1, 1, 1, 0.025 },
+	panel      = { 0.095, 0.110, 0.125, 0.94 },
+	panelEdge  = { 1, 1, 1, 0.07 },
+	panelTop   = { 1, 1, 1, 0.05 },
+	line       = { 1, 1, 1, 0.07 },
+	text       = { 0.90, 0.92, 0.93 },
+	subtle     = { 0.56, 0.62, 0.66 },
+	heading    = { 0.97, 0.98, 0.98 },
+	label      = { 0.42, 0.70, 0.67 },
+	accent     = { 0.27, 0.82, 0.75 },
+	points     = { 1.00, 0.76, 0.33 },
+	done       = { 0.47, 0.84, 0.43 },
+	hover      = { 0.27, 0.82, 0.75, 0.07 },
+	select     = { 0.27, 0.82, 0.75, 0.14 },
+	stripe     = { 1, 1, 1, 0.018 },
+	track      = { 1, 1, 1, 0.08 },
+	thumb      = { 0.27, 0.82, 0.75, 0.45 },
+	btn        = { 0.27, 0.82, 0.75, 0.12 },    btnHover = { 0.27, 0.82, 0.75, 0.24 },
+	btnEdge    = { 0.27, 0.82, 0.75, 0.45 },    btnEdgeHover = { 0.27, 0.82, 0.75, 0.9 },
+	btnText    = { 0.80, 0.95, 0.92 },          btnTextHover = { 1, 1, 1 },
+	-- The book's parts, for things shared with it (cards, the cover, pop-ups).
+	page       = { 0.075, 0.087, 0.098, 1 },
+	pageEdge   = { 1, 1, 1, 0.10 },
+	spine      = { 0, 0, 0 },
+	cover      = { 0.050, 0.060, 0.070, 0.99 },
+	coverEdge  = { 0.27, 0.82, 0.75, 0.35 },
+	coverText  = { 0.80, 0.95, 0.92 },
+	ribbons    = T.LOOKS.explorer.ribbons,
+	kinds = {
+		zone = { 0.27, 0.82, 0.75 }, zonefull = { 0.47, 0.84, 0.43 }, continent = { 1.00, 0.76, 0.33 },
+		area = { 0.45, 0.52, 0.56 }, rare = { 0.78, 0.58, 1.00 }, treasure = { 1.00, 0.84, 0.40 },
+		place = { 0.95, 0.50, 0.58 }, milestone = { 1.00, 0.76, 0.33 }, weekly = { 0.27, 0.82, 0.75 },
+		alert = { 1.00, 0.58, 0.32 }, bounty = { 1.00, 0.84, 0.40 }, expedition = { 0.27, 0.82, 0.75 },
+	},
+}
+
+-- The book's colours, or the map window's (settings.shell).
+function T.Look()
+	local s = ns.db and ns.db.settings
+	return (s and s.shell == "map") and T.LOOKS.map or T.LOOKS.explorer
+end
 
 function T.KindColor(kind)
 	local k = T.Look().kinds
@@ -84,6 +129,20 @@ function T.OnTheme(fn)
 	local ok, err = pcall(fn, T.Look())
 	if not ok then geterrorhandler()(err) end
 end
+
+-- Paints everything again, after the look changes.
+function T.Repaint()
+	local look = T.Look()
+	for _, fn in ipairs(painters) do
+		local ok, err = pcall(fn, look)
+		if not ok then geterrorhandler()(err) end
+	end
+end
+
+-- Things made before the saved settings loaded take the right look then.
+ns.Listen("DB_READY", function()
+	if ns.db.settings.shell == "map" then T.Repaint() end
+end)
 
 ---------------------------------------------------------------------------
 -- Fonts: the game's reading font in fixed sizes. "Shadow" variants are for
