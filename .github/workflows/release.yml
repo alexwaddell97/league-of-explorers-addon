@@ -1,0 +1,94 @@
+# Builds LeagueOfExplorers-<version>.zip and publishes it when a version tag
+# is pushed (git tag v0.1.0 && git push origin v0.1.0): a GitHub release,
+# and CurseForge too once it's set up. The notes are that version's section
+# of CHANGELOG.md. A version with "beta" or "alpha" in it goes up as one.
+#
+# CurseForge needs, under Settings > Secrets and variables > Actions:
+#   secret   CF_API_KEY       an API token from your CurseForge account
+#   variable CF_PROJECT_ID    the project's ID (on its CurseForge page)
+#   variable CF_GAME_VERSION  the game version to file it under: its name as
+#                             CurseForge shows it, or its ID (several, comma-separated)
+# Without CF_PROJECT_ID the CurseForge step is skipped.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the version matches the tag
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          grep -qx "## Version: $v" LeagueOfExplorers.toc || { echo "::error::LeagueOfExplorers.toc isn't at version $v"; exit 1; }
+          grep -qx "## $v" CHANGELOG.md || { echo "::error::CHANGELOG.md has no section for $v"; exit 1; }
+
+      - name: Build the zip
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          mkdir -p build/LeagueOfExplorers
+          rsync -a --exclude='.git*' --exclude='.github' --exclude='build' --exclude='docs' --exclude='tools' ./ build/LeagueOfExplorers/
+          cd build && zip -qr "LeagueOfExplorers-$v.zip" LeagueOfExplorers
+
+      - name: Release notes from the changelog
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v head="## $v" '$0 == head { on = 1; next } /^## / && on { exit } on' CHANGELOG.md > changelog.md
+          cp changelog.md notes.md
+          printf '\n---\nUnzip into `World of Warcraft\\_forever_\\Interface\\AddOns`, so you have an `AddOns\\LeagueOfExplorers` folder.\n' >> notes.md
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          name: League of Explorers ${{ github.ref_name }}
+          body_path: notes.md
+          files: build/LeagueOfExplorers-*.zip
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+
+      - name: Upload to CurseForge
+        if: ${{ vars.CF_PROJECT_ID != '' }}
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_PROJECT_ID: ${{ vars.CF_PROJECT_ID }}
+          CF_GAME_VERSION: ${{ vars.CF_GAME_VERSION }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          api="https://wow.curseforge.com/api"
+          [ -n "$CF_API_KEY" ] || { echo "::error::Add the CF_API_KEY secret (an API token from your CurseForge account)."; exit 1; }
+          [ -n "$CF_GAME_VERSION" ] || { echo "::error::Add the CF_GAME_VERSION variable: the game version to file it under."; exit 1; }
+
+          # The game version: IDs as given, or looked up by name
+          if echo "$CF_GAME_VERSION" | grep -qE '^[0-9]+(,[0-9]+)*$'; then
+            ids="[$CF_GAME_VERSION]"
+          else
+            versions=$(curl -sS --fail-with-body -H "X-Api-Token: $CF_API_KEY" "$api/game/versions")
+            ids=$(echo "$versions" | jq -c --arg n "$CF_GAME_VERSION" '[.[] | select(.name == $n) | .id]')
+            if [ "$ids" = "[]" ]; then
+              echo "::error::CurseForge has no game version called \"$CF_GAME_VERSION\". The names it knows are listed above."
+              echo "::group::CurseForge game versions (name, then ID)"
+              echo "$versions" | jq -r '.[] | "\(.name)  \(.id)"' | sort -u
+              echo "::endgroup::"
+              exit 1
+            fi
+          fi
+
+          case "$v" in
+            *alpha*) type=alpha ;;
+            *beta*) type=beta ;;
+            *) type=release ;;
+          esac
+          meta=$(jq -n --rawfile cl changelog.md --arg name "League of Explorers $v" --argjson gv "$ids" --arg type "$type" \
+            '{changelog: $cl, changelogType: "markdown", displayName: $name, gameVersions: $gv, releaseType: $type}')
+          # --form-string sends the details as they are: with -F, a ";" in the
+          # notes would cut the JSON short
+          curl -sS --fail-with-body -H "X-Api-Token: $CF_API_KEY" \
+            --form-string "metadata=$meta" -F "file=@build/LeagueOfExplorers-$v.zip" \
+            "$api/projects/$CF_PROJECT_ID/upload-file"
+          echo
+          echo "Uploaded League of Explorers $v to CurseForge."

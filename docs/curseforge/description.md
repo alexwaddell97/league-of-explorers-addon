@@ -1,24 +1,16 @@
 # League of Explorers
 
-An exploration addon for WoW Forever. It tracks the zones you explore, the rares and treasures you find, and the points you earn, and shares them with your guild. Not in a guild? Solo mode works without one.
+Track the zones you explore and the rares and treasures you find, and see how you compare with your guild.
 
-## Features
+- See every zone and how much of it you've explored
+- Collect open-world rares in the Bestiary
+- Take on a weekly hunt picked for your level
+- Earn points and work up the ranks
+- Share finds and rare sightings with your guild, or play solo
 
-- **My Journal:** every zone and its areas, with your rank and totals.
-- **Bestiary:** every open-world rare by zone and creature type. Rares you haven't found show as silhouettes.
-- **Weekly hunt:** three rares to kill and two zones to enter each week, picked for your level.
-- **Points and ranks:** each rank needs a mix of zones, fully explored zones and rares.
-- **Map pins:** rares you're hunting and recent sightings, on the world map and minimap.
-- **Guild:** shared finds, leaderboards and seasons, rare alerts, expeditions and bounties from officers, guild places, and your rank in guild chat.
-- **Solo mode:** turns the guild features off. Everything else works as normal.
+Type `/loe` to open it, or `/loe demo` for a quick tour.
 
-Open it with `/loe` or the minimap button. `/loe demo` gives a tour with an example guild.
-
-Forever doesn't give addons the full combat log, so a rare counts as killed when you loot it, or when you see it die after fighting it.
-
-## Credits
-
-The rare list comes from Polestar's Polestar Codex data (GPL-3.0), which was built from pfQuest (MIT), QuestieDB (Questie-Forever) and the game's map tables.
+The rare list comes from Polestar Codex (GPL-3.0).
 
 A note on AI: League of Explorers is an AI assisted project.
 

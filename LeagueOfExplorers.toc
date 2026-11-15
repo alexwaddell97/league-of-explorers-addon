@@ -1,6 +1,7 @@
 ## Interface: 16001
 ## Title: League of Explorers
-## Notes: An adventurer's journal for the guild: zones explored, rares and treasures found, and points earned. /loe
+## Notes: Track the zones you explore and the rares you find, with your guild or on your own. /loe
+## Author: Vaxorus
 ## Version: 0.1.0
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## SavedVariables: LeagueOfExplorersDB

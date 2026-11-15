@@ -104,22 +104,26 @@ def banner():
 
 
 def icon():
+    """The banner in a square: the lit camp under the tree, and the six
+    bookmarks hanging from the top edge."""
     S = 400
-    img = Image.new("RGBA", (S, S), PANEL + (255,))
-    # The book's pages along the top, and the six bookmarks out of them.
-    top = 64
-    w, gap = 46, 10
-    x = (S - (6 * w + 5 * gap)) // 2
+    photo = Image.open(SHOT).convert("RGB").crop(CLEAN)
+    # The camp and the trunk, a little brighter so it reads when small.
+    sq = photo.crop((660, 380, 1200, 920)).resize((S, S), Image.LANCZOS)
+    sq = Image.eval(sq, lambda v: int(255 * (v / 255) ** 0.82))
+    img = sq.convert("RGBA")
+    # Darker at the top, under the ribbons.
+    shade = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shade)
+    for y in range(170):
+        sd.line((0, y, S, y), fill=PANEL + (int(150 * (1 - y / 170) ** 1.5),))
+    img = Image.alpha_composite(img, shade)
+    w, gap = 30, 8
+    x = 36
     for i, c in enumerate(RIBBONS):
-        h = (316, 280, 340, 298, 268, 306)[i]
-        img.alpha_composite(ribbon(w, h, c), (x, top - 20))
+        h = (104, 84, 116, 92, 78, 98)[i]
+        img.alpha_composite(ribbon(w, h, c), (x, 0))
         x += w + gap
-    d = ImageDraw.Draw(img)
-    d.rectangle((0, 0, S, top), fill=PAPER + (255,))
-    # The page block's edge: fine lines along the bottom of the pages.
-    for k, y in enumerate((top - 14, top - 9, top - 4)):
-        d.line((0, y, S, y), fill=(196, 180, 150, 255), width=1)
-    d.line((0, top, S, top), fill=(120, 98, 72, 255), width=2)
     img.convert("RGB").save(os.path.join(HERE, "icon.png"))
 
 
