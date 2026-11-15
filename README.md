@@ -1,232 +1,85 @@
+<p align="center">
+  <img src="docs/curseforge/banner.jpg" alt="League of Explorers" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://ko-fi.com/vaxorus"><img src="https://img.shields.io/badge/Support%20League%20of%20Explorers-on%20Ko--fi-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" alt="Support League of Explorers on Ko-fi"></a>
+</p>
+
 # League of Explorers
 
-An exploration addon for the League of Explorers guild on WoW Forever. It
-tracks the zones you explore, the rares and treasures you find, and the
-points you earn, and shares them with the guild.
+An exploration addon for World of Warcraft Forever. It tracks the zones you explore, the rares and treasures you find and the points you earn, and shares them with your guild. It was made for the League of Explorers guild, but works in any guild or on your own.
 
-Open it with `/loe` (or `/explorers`), the minimap button, or the book tab on
-the side of the Guild & Communities window.
+> League of Explorers is in beta. If something's broken or confusing, please [open an issue](https://github.com/alexwaddell97/league-of-explorers-addon/issues/new).
 
-You don't need to be in a guild to use it: see [Solo mode](#solo-mode).
+## What it does
 
-## Pages
+**Exploration.** Every zone and its areas, read from the game's own explored-map data. What you explored before installing counts toward your rank.
 
-The window is laid out as a book, with a tab for each page. It opens and
-closes like one: the cover (with your name and rank on it) swings open over
-the spine and two blank pages follow it, and it swings shut again when you
-close it. **Open and close like a book** in the settings turns this off.
+**Bestiary.** Every open-world rare by zone and creature type. Rares you haven't found show as silhouettes.
 
-- **Guild**: how many members use the addon, guild totals, your rank,
-  this week's leaders and recent activity.
-- **My Journal**: your rank and totals, and every zone with a dot for each
-  of its areas. Select a zone to see its map with your explored areas.
-- **Bestiary**: every rare, grouped by zone and creature type. Rares no one
-  in the guild has found show as an unnamed silhouette. Rares the guild has
-  found show as a named silhouette until you find them yourself. Each rare's
-  page shows who found
-  it first, sightings, your notes and any bounty on it.
-- **Expeditions**: the weekly hunt, plus expeditions and bounties posted
-  by officers. Rare goals in all of these need a kill, not just a sighting. An expedition pays everyone who completes it, with half
-  extra for the first. A bounty pays only the first. Only progress made
-  after something is posted counts.
-- **Submissions**: suggest a place to the officers. Approved places earn
-  points and become guild places that anyone can visit.
-- **Leaders**: leaderboards by week, month, season and all time, your rank,
-  collections and season winners.
+**Weekly hunt.** Three rares to kill and two zones to enter each week, picked for your level.
 
-### How things are detected
+**Points and ranks.** Points go on the leaderboards. Ranks are for what you've done, and each needs a mix of zones, fully explored zones and rares. Your alts count with your main.
 
-- **Exploration** uses the game's explored-map data, so "fully explored"
-  means every area of the zone has been explored.
-- **Rares** are detected when they appear on your minimap, show a nameplate,
-  or are targeted or moused over.
-- **Treasures** are detected when they appear on your minimap.
-- **Kills**: addons can't read the full combat log on Forever, so a rare
-  counts as killed when you loot its corpse, or when you see it die after
-  fighting it yourself. A corpse tagged by someone else never counts. In a
-  group, everyone who loots it or was fighting it gets the kill.
+**Guild.** Shared finds, leaderboards and seasons, rare alerts, expeditions and bounties posted by officers, places members suggest, and your rank in guild chat and the guild window.
 
-### Points
+**Map pins.** Rares you're hunting and recent sightings, on the world map and minimap.
 
-Points are for the leaderboards. Your characters count together, and each
-find counts once per player.
+**Solo mode.** Turns the guild features off, for playing without a guild. It's in the settings, or `/loe solo`.
 
-| Action | Points |
-| --- | --- |
-| Discover a new zone | 10 |
-| Fully explore a zone | 40 |
-| Reach a new continent | 25 |
-| Find a rare creature | 10 |
-| First in the guild to find a rare | +40 |
-| Find a new type of treasure | 15 |
-| Visit a guild place | 25 |
-| Each target of the weekly hunt | 15 |
-| Complete the weekly hunt | +25 |
-| Have a submission approved | 30 |
-| Find every rare in a zone (collection) | 30 |
-| Fully explore a continent (collection) | 100 |
-| Complete a guild expedition | set by officers |
+## How it works
 
-Exploration from before you installed the addon earns no points, but counts
-toward your rank.
+Rares and treasures are picked up when they show on your minimap, show a nameplate, or you target or mouse over them. Forever doesn't give addons the full combat log, so a rare counts as killed when you loot it, or when you see it die after fighting it.
 
-### Ranks
+Finds are shared over the guild's addon channel, and only with members on the guild roster. Anyone who was offline catches up when they log in.
 
-Ranks are based on what you've done, not points. Each rank needs a mix of
-things (plus everything the ranks below it need), so you can't reach it by
-doing only one thing.
+## Installing
 
-| Rank | Needs |
-| --- | --- |
-| Wanderer | nothing |
-| Pathfinder | 10 zones discovered |
-| Scout | 20 zones, 10 rares |
-| Trailblazer | 30 zones, 5 fully explored, 25 rares |
-| Wayfinder | 40 zones, 10 fully explored, 50 rares |
-| Cartographer | 20 fully explored, 80 rares |
-| Pioneer | 30 fully explored, 120 rares, 1 guild first |
-| Master Explorer | 40 fully explored, 200 rares, 3 guild firsts |
-| Grand Explorer | every zone fully explored, 300 rares, 5 guild firsts |
+Unzip it into:
 
-### Rare alerts and map pins
+```
+World of Warcraft\_forever_\Interface\AddOns\LeagueOfExplorers
+```
 
-When you spot a rare alive, guildmates who are online hear about it. Which
-sightings pop up for you is set in the settings (or `/loe alerts`):
+The folder must be called `LeagueOfExplorers`. If you clone this repository instead, clone it into that folder name:
 
-- **Your zone and hunted rares** (default): rares in the zone you're in, and
-  any rare you're hunting for the weekly hunt, a bounty or an expedition.
-- **Hunted rares only**
-- **Every rare**
-- **Off**
+```
+git clone https://github.com/alexwaddell97/league-of-explorers-addon.git LeagueOfExplorers
+```
 
-Rares more than 10 levels below you don't pop up unless you're hunting them,
-and at most 4 others pop up in any 10 minutes. Click a pop-up to set a
-waypoint. When the rare is killed, it's taken off everyone's map.
+## Getting started
 
-Pins on the world map and minimap show:
+Type `/loe` to open it, or click the minimap button. `/loe demo` gives a tour with an example guild (nothing is sent or saved).
 
-- rares spotted in the last 10 minutes
-- rares you need to kill, where you or the guild last saw them
-- guild places (faded once you've visited)
+| Command | What it does |
+|---|---|
+| `/loe` | Open or close the window |
+| `/loe demo` | A tour of every page |
+| `/loe solo` | Switch between solo and guild mode |
+| `/loe alerts` | Choose which guild rare sightings pop up |
+| `/loe toasts move` | Move the pop-ups |
+| `/loe officers` | Show or set which guild ranks are officers |
+| `/loe sync` | Guild sync status |
 
-The addon never shows a rare's spawn point from its rare list, only places
-someone in the guild has actually seen it. Hover a pin for details and click
-it to set a waypoint. On the minimap, rares you're hunting stay on the edge
-when they're out of range. World map and minimap pins can each be turned off
-in the settings.
+Guild ranks 0 and 1 are officers by default. The guild master can change this in the settings.
 
-### Pop-ups
+## Reporting a bug
 
-Pop-ups appear at the top of the screen and wait while the game is showing a
-zone name, so the two don't overlap. To move them, use **Move pop-ups** in
-the settings (or `/loe toasts move`), drag the box, and right-click it when
-done. `/loe toasts reset` puts them back.
-
-### Mains and alts
-
-Your characters share one rank and one row on the leaderboards. Choose your
-main in the settings (the cog); every character on your account uses it.
-
-### Ongoing content
-
-- **Weekly hunt**: each level band (1-19, 20-29, 30-39, 40-49, 50-60) gets
-  its own hunt every week: three rares and two zones for those levels,
-  outside the other faction's starting zones. Kill the rares and enter the
-  zones before the week ends. They count even if you've done them before.
-  Your band is set by your level at the start of the week, and you get one
-  hunt a week across all your characters.
-- **Seasons**: a season is three months. Season 1 is autumn 2026 (October to
-  December), Season 2 is winter 2027, and so on. Each season's top three
-  players are listed under Season winners.
-- **Guild places**: approved submissions. Stand within 30 yards of one to
-  visit it.
-- **Collections**: find every rare in a zone, or fully explore a continent.
-- **Guild milestones**: shared goals for rares, fully explored zones and
-  guild places. Reached milestones show in recent activity.
-- **Expeditions and bounties** from the officers.
-
-## Solo mode
-
-Solo mode is for using the addon on your own. Turn it on or off with
-**Solo mode** in the settings, or `/loe solo`. It's set per character, and
-starts on for a character that isn't in a guild.
-
-In solo mode:
-
-- The Guild, Leaders and Submissions pages are hidden. Expeditions becomes
-  **Weekly hunt**, with just your own hunt.
-- Nothing is sent to or taken from the guild: no shared finds, rare alerts,
-  ranks in the guild window or chat, expeditions, bounties or guild places.
-- Your exploration, rares, treasures, points, rank, weekly hunt, Bestiary
-  and map pins all work as usual. Finds count for you alone.
-- There's no bonus for being first in the guild to find a rare, and ranks
-  don't ask for guild firsts.
-
-Nothing is deleted when you switch, so turning solo mode off brings the
-guild features back with everything you found in the meantime.
-
-## Guild window and chat
-
-For guild members who use the addon:
-
-- **Guild window**: an icon in their rank's colour next to their name, and
-  their rank, points, weekly position and finds in the tooltip.
-- **Guild chat**: their rank in brackets before their name in guild and
-  officer chat, e.g. "[Guild] [Cartographer] [Brennan Black]: ...". It works
-  alongside Kinship and Total RP 3 roleplay names too.
-
-Both can be turned off in the settings. They only add to the game's own
-display, so Kinship's roleplay names still work. Addons can't give real
-in-game titles.
-
-## Officers
-
-Guild ranks 0 and 1 count as officers by default (0 is the guild master).
-The guild master can change this with `/loe officers <rank>`, or in the
-settings.
-
-Anyone can try the officer and guild master tools with **Preview officer
-tools** in the settings. While it's on, you count as guild master on your
-own computer only. Nothing you post, review or change is sent to the guild,
-and it's all deleted when you turn preview off.
-
-## Credits
-
-The rare creature list in `Data/Rares.lua` is exported from Polestar's
-Polestar Codex data (GPL-3.0), which was built from pfQuest (MIT),
-QuestieDB (Questie-Forever) and the game client's map tables. Only facts
-are used: IDs, names, levels and locations. `tools/export_rares.lua`
-rebuilds it from an installed Polestar_Codex.
-
-## Commands
-
-- `/loe`: open or close the window
-- `/loe status`: check which game features the addon can use
-- `/loe minimap`: show or hide the minimap button
-- `/loe toasts`: turn discovery pop-ups on or off
-- `/loe toasts move`: move the pop-ups (`/loe toasts reset` puts them back)
-- `/loe sync`: guild sync status
-- `/loe demo`: a tour of every page and pop-up with an example guild
-  (nothing is sent or saved; type `/loe demo` again to stop)
-- `/loe whoami`: show your character name as the game and addon see it
-- `/loe kofi`: show the Ko-fi link
-- `/loe officers`: show which guild ranks are officers
-- `/loe alerts`: choose which guild rare sightings pop up
-- `/loe solo`: switch between solo and guild mode
-
-## Planned
-
-- Officers setting point values for their guild.
-- Fixes and changes from guild feedback.
+[Open an issue](https://github.com/alexwaddell97/league-of-explorers-addon/issues/new) with what you were doing and any error you saw. `/loe status` shows which game features the addon can use, which helps too.
 
 ## For developers
 
-- `tools/test_logic.lua` runs the addon against a fake game API:
-  `luatex --luaonly tools/test_logic.lua`, or any Lua 5.1+.
-- `tools/export_areas.py` rebuilds `Data/Areas.lua` from an export of the
-  client's map overlay tables.
+`tools/test_logic.lua` runs the addon against a fake game API: `luatex --luaonly tools/test_logic.lua`, or any Lua 5.1+.
 
-## Support
+## Credits
 
-I make this addon for the League of Explorers guild. If you'd like to
-support it, I'm on [Ko-fi](https://ko-fi.com/vaxorus).
+The rare list in `Data/Rares.lua` comes from Polestar's Polestar Codex data (GPL-3.0), which was built from pfQuest (MIT), QuestieDB (Questie-Forever) and the game's map tables.
+
+## A note on AI
+
+League of Explorers is an AI assisted project.
+
+World of Warcraft is a trademark of Blizzard Entertainment, Inc. League of Explorers isn't affiliated with or endorsed by Blizzard.
+
+If you'd like to support development, I'm on [Ko-fi](https://ko-fi.com/vaxorus).
