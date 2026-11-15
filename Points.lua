@@ -123,11 +123,6 @@ function P.SeasonPeriod(start)
 	return ("%s %d"):format(SEASONS[math.floor((d.month - 1) / 3) + 1], d.year)
 end
 
--- "Season 1 (Autumn 2026)".
-function P.SeasonFull(start)
-	return ("%s (%s)"):format(P.SeasonName(start), P.SeasonPeriod(start))
-end
-
 -- Whole days left in the season running now.
 function P.SeasonDaysLeft(now)
 	now = now or ns.Now()
@@ -311,8 +306,6 @@ function P.Counts(who)
 	return { zones = n(zones), full = n(full), rares = n(rares), firsts = firsts }
 end
 
-function P.Firsts(who) return P.Counts(who).firsts end
-
 local function meets(r, c)
 	for _, d in ipairs(P.DEEDS) do
 		local v = need(r, d.key)
@@ -344,24 +337,7 @@ function P.RankOf(who)
 	return at, cur, nxt, n > 0 and sum / n or 1, asks
 end
 
--- What a rank asks for, as text: "30 zones discovered, 5 fully explored, 25 rares".
-function P.RankText(r)
-	local bits = {}
-	for _, d in ipairs(P.DEEDS) do
-		local v = need(r, d.key)
-		if v then
-			local label = d.label
-			if d.key == "full" and r.full == "all" then
-				bits[#bits + 1] = "every zone fully explored"
-			else
-				bits[#bits + 1] = v .. " " .. label
-			end
-		end
-	end
-	return #bits > 0 and table.concat(bits, ", ") or "from the start"
-end
-
--- The same, short, for tables: "30 zones, 5 explored, 25 rares".
+-- What a rank asks for, short, for tables: "30 zones, 5 explored, 25 rares".
 local SHORT = { zones = "zones", full = "explored", rares = "rares", firsts = "firsts" }
 function P.RankShort(r)
 	local bits = {}
@@ -399,19 +375,3 @@ function P.Champions(members)
 	return out
 end
 
--- { [kind] = { count = n, points = p } } for one player.
-function P.Breakdown(who, since)
-	local out = {}
-	for _, e in ipairs(P.Deeds(P.Player(who))) do
-		if not since or e.t >= since then
-			local b = out[e.kind]
-			if not b then
-				b = { count = 0, points = 0 }
-				out[e.kind] = b
-			end
-			b.count = b.count + 1
-			b.points = b.points + P.Of(e)
-		end
-	end
-	return out
-end

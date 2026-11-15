@@ -55,10 +55,7 @@ local function pageOf(s)
 end
 J.Available = available
 
-local function sound(kit)
-	if ns.db.settings.sound == false then return end
-	if SOUNDKIT and SOUNDKIT[kit] then pcall(PlaySound, SOUNDKIT[kit]) end
-end
+local sound = W.Sound
 
 ---------------------------------------------------------------------------
 -- Settings popover (the cog above the cover)

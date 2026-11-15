@@ -96,7 +96,7 @@ function W.MapBanner(parent, w, h)
 		{ f.kicker, "Label" }, { f.title, "Huge" }, { f.sub, "Small" }, { f.big, "Display" }, { f.bigLabel, "Label" },
 	}
 	T.OnTheme(function(look)
-		-- Both looks are paper now: the map fades into the page, words in ink.
+		-- The map fades into the page, and the words are in ink.
 		local p = look.page
 		T.Gradient(f.bottom, "VERTICAL", p[1], p[2], p[3], 1, 0)
 		f.bottom:SetHeight(h * 0.62)

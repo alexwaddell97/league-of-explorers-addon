@@ -4,7 +4,7 @@
 
 local _, ns = ...
 
-local T, W = ns.Theme, ns.Widgets
+local T = ns.Theme
 
 local KIND = {
 	zone = { title = "Zone discovered", page = "journal" },

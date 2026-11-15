@@ -5,7 +5,7 @@
 
 local _, ns = ...
 
-local T, W, U = ns.Theme, ns.Widgets, ns.UI
+local T, W = ns.Theme, ns.Widgets
 
 local function zoneState(ch, zoneID)
 	local rec = ch.zones[zoneID]

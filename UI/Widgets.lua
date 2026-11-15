@@ -1,4 +1,4 @@
--- Widgets. Each paints itself for both looks through T.OnTheme.
+-- Widgets. Each paints itself through T.OnTheme.
 
 local _, ns = ...
 
@@ -7,7 +7,9 @@ local WHITE = T.WHITE
 local W = {}
 ns.Widgets = W
 
+-- A game sound, unless sounds are off in the settings.
 local function sound(kit)
+	if ns.db and ns.db.settings.sound == false then return end
 	if SOUNDKIT and SOUNDKIT[kit] then pcall(PlaySound, SOUNDKIT[kit]) end
 end
 W.Sound = sound
@@ -390,29 +392,6 @@ function W.Stat(parent, label, w)
 	row.value:SetPoint("RIGHT")
 	row.value:SetJustifyH("RIGHT")
 	return row
-end
-
--- A panel with a small-capitals label, a big number and a note: the
--- journal's at-a-glance figures.
-function W.Tile(parent, label, w, h, icon)
-	local p = W.Panel(parent)
-	p:SetSize(w, h or 78)
-	p.label = W.Label(p, label)
-	p.label:SetPoint("TOPLEFT", 14, -14)
-	p.value = T.Text(p, "0", "Display", "heading")
-	p.value:SetPoint("TOPLEFT", p.label, "BOTTOMLEFT", 0, -6)
-	p.note = T.Text(p, "", "Small", "subtle")
-	p.note:SetPoint("BOTTOMLEFT", p.value, "BOTTOMRIGHT", 8, 3)
-	if icon then
-		p.icon = p:CreateTexture(nil, "ARTWORK")
-		p.icon:SetSize(30, 30)
-		p.icon:SetPoint("TOPRIGHT", -14, -14)
-		p.icon:SetTexture(icon)
-		p.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-		T.Round(p.icon)
-		p.icon:SetAlpha(0.85)
-	end
-	return p
 end
 
 -- A small pill ("Fully explored", "+20").
