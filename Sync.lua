@@ -2,9 +2,11 @@
 -- every member's journal holds the whole guild's discoveries.
 --
 -- Messages (prefix "LoE", channel GUILD, fields split by "~"):
---   E~1~who~seq~t~kind~key~map~x~y~name~mask   one entry
+--   E~1~who~seq~t~kind~key~map~x~y~name~mask~note   one entry
 --   H~1~part~parts~who:seq,who:seq,...         a digest: the highest seq
 --                                              held for each author
+--   A~1~id~map~x~y~dead                        a rare spotted alive (or, with
+--                                              dead = 1, killed): see Alerts.lua
 --
 -- New entries go out the moment they are written. On login (and every so
 -- often) each member sends a digest; whoever holds entries the sender lacks
@@ -44,13 +46,22 @@ end
 
 local function num(s) return s ~= "" and tonumber(s) or nil end
 
+-- Keys and masks may hold commas and colons (goal lists, entry ids), so
+-- only the separators that would break a message are taken out of them.
+local function cleanKey(s)
+	if s == nil then return "" end
+	return (tostring(s):gsub("[~|\n\r]", " "))
+end
+
 function S.Encode(e)
-	local key = e.key
-	return table.concat({
-		"E", VERSION, e.who, e.seq, e.t, e.kind, clean(key), e.map or "",
+	local head = table.concat({
+		"E", VERSION, e.who, e.seq, e.t, e.kind, cleanKey(e.key), e.map or "",
 		e.x and ("%.1f"):format(e.x) or "", e.y and ("%.1f"):format(e.y) or "",
-		clean(e.name):sub(1, 60), clean(e.mask),
+		clean(e.name):sub(1, 48), cleanKey(e.mask),
 	}, SEP)
+	-- The note takes whatever room is left in the message.
+	local room = MAX_LEN - #head - 1
+	return head .. SEP .. cleanKey(e.note):sub(1, math.max(0, room))
 end
 
 function S.Decode(msg)
@@ -62,6 +73,7 @@ function S.Decode(msg)
 		key = num(f[7] or "") or f[7], map = num(f[8] or ""),
 		x = num(f[9] or ""), y = num(f[10] or ""),
 		name = (f[11] ~= "" and f[11]) or nil, mask = (f[12] ~= "" and f[12]) or nil,
+		note = (f[13] and f[13] ~= "" and f[13]) or nil,
 	}
 	return e
 end
@@ -70,7 +82,7 @@ end
 -- Sending
 ---------------------------------------------------------------------------
 local function canSend()
-	return ns.Guild.InGuild() and C_ChatInfo and C_ChatInfo.SendAddonMessage
+	return ns.Guild.InGuild() and not ns.Solo() and C_ChatInfo and C_ChatInfo.SendAddonMessage
 end
 
 local THROTTLED = Enum and Enum.SendAddonMessageResult and Enum.SendAddonMessageResult.AddonMessageThrottle
@@ -103,7 +115,15 @@ pump:SetScript("OnUpdate", function(_, elapsed)
 end)
 
 local function sendEntry(e, id)
+	if e.test then return end -- officer preview: never leaves this computer
 	push(S.Encode(e), id)
+end
+
+-- A rare spotted (or killed): goes ahead of everything else in the queue.
+function S.SendAlert(id, map, x, y, dead)
+	if not canSend() or not id then return end
+	table.insert(queue, 1, { msg = table.concat({ "A", VERSION, id, map or "",
+		x and ("%.1f"):format(x) or "", y and ("%.1f"):format(y) or "", dead and "1" or "" }, SEP) })
 end
 
 -- Members and this account's characters still in the guild: whose entries we share.
@@ -201,7 +221,7 @@ local function onDigest(sender, part, parts, body)
 end
 
 function S.OnMessage(prefix, msg, channel, sender)
-	if prefix ~= PREFIX or channel ~= "GUILD" then return end
+	if prefix ~= PREFIX or channel ~= "GUILD" or ns.Solo() then return end
 	msg, sender = ns.Readable(msg), ns.Readable(sender)
 	if type(msg) ~= "string" or type(sender) ~= "string" then return end
 	sender = ns.Guild.Full(sender)
@@ -211,7 +231,7 @@ function S.OnMessage(prefix, msg, channel, sender)
 	if kind == "E" .. SEP then
 		local e = S.Decode(msg)
 		if not e or not e.who then return end
-		e.who = ns.Guild.Full(e.who)
+		e.who = ns.Name(e.who)
 		if not (ns.Guild.IsMember(e.who) or ns.Guild.IsMine(e.who)) then return end
 		if e.seq then
 			-- Someone answered with this entry: our own answer can stand down.
@@ -219,6 +239,11 @@ function S.OnMessage(prefix, msg, channel, sender)
 			if pendingIds[id] then pendingIds[id] = false end
 		end
 		if ns.Ledger.Merge(e, e.who == sender, sender) then stats.merged = stats.merged + 1 end
+	elseif kind == "A" .. SEP then
+		local id, map, x, y, dead = msg:match("^A~[^~]*~(%d+)~(%d*)~([%d%.]*)~([%d%.]*)~?(%d?)")
+		if id and ns.Alerts then
+			ns.Alerts.Heard(sender, tonumber(id), num(map), num(x), num(y), dead == "1")
+		end
 	elseif kind == "H" .. SEP then
 		local _, part, parts, body = msg:match("^H~([^~]*)~(%d+)~(%d+)~(.*)$")
 		part, parts = tonumber(part), tonumber(parts)
@@ -258,6 +283,6 @@ ns.Commands.sync = function()
 	ns.Print(("guild: %s, %d members (%d online)"):format(ns.Guild.name or "none", total, online))
 	ns.Print(("sync: %d sent, %d heard, %d entries merged, %d waiting to send"):format(
 		stats.sent, stats.heard, stats.merged, #queue))
-	ns.Print(("journal holds %d entries from %d characters"):format(#ns.db.entries, #ns.Ledger.Authors()))
+	ns.Print(("stored: %d entries from %d characters"):format(#ns.db.entries, #ns.Ledger.Authors()))
 	S.SendDigest(true)
 end

@@ -90,10 +90,19 @@ function W.MapBanner(parent, w, h)
 	f.bigLabel:SetPoint("TOPRIGHT", f.big, "BOTTOMRIGHT", 0, -3)
 	f.bigLabel:SetJustifyH("RIGHT")
 
+	-- On paper the map fades into the page and the words are inked on it;
+	-- on the game's dark pages they sit over a shadow.
+	local words = {
+		{ f.kicker, "Label" }, { f.title, "Huge" }, { f.sub, "Small" }, { f.big, "Display" }, { f.bigLabel, "Label" },
+	}
 	T.OnTheme(function(look)
-		local p = look.window
-		T.Gradient(f.bottom, "VERTICAL", p[1], p[2], p[3], 0.97, 0)
-		T.Gradient(f.left, "HORIZONTAL", 0, 0, 0, 0.55, 0)
+		-- Both looks are paper now: the map fades into the page, words in ink.
+		local p = look.page
+		T.Gradient(f.bottom, "VERTICAL", p[1], p[2], p[3], 1, 0)
+		f.bottom:SetHeight(h * 0.62)
+		T.Gradient(f.left, "HORIZONTAL", 0, 0, 0, 0, 0)
+		f.wash:SetColorTexture(0, 0, 0, 0.06)
+		for _, w in ipairs(words) do w[1]:SetFontObject(T.FONTS[w[2]]) end
 		f.fallback:SetColorTexture(look.panel[1], look.panel[2], look.panel[3], 1)
 		local a = look.accent
 		f.pin.ring:SetVertexColor(a[1], a[2], a[3], 1)

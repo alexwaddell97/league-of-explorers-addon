@@ -64,7 +64,7 @@ local function create()
 			GameTooltip:AddDoubleLine("Points this week", P.Total(me, P.WeekStart()), 1, 0.82, 0, 1, 1, 1)
 			GameTooltip:AddDoubleLine("Points all time", P.Total(me), 1, 0.82, 0, 1, 1, 1)
 		end
-		GameTooltip:AddLine("Click to open your journal. Drag to move.", 0.7, 0.7, 0.7, true)
+		GameTooltip:AddLine("Click to open. Drag to move.", 0.7, 0.7, 0.7, true)
 		GameTooltip:Show()
 	end)
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)

@@ -4,22 +4,35 @@
 ## Version: 0.1.0
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## SavedVariables: LeagueOfExplorersDB
+## X-Website: https://ko-fi.com/vaxorus
 
 Core.lua
 Data\Areas.lua
+Data\Rares.lua
 Points.lua
 Ledger.lua
+Players.lua
 Exploration.lua
 Rares.lua
 Guild.lua
+Work.lua
+Bestiary.lua
 Sync.lua
+Alerts.lua
 UI\Theme.lua
 UI\Widgets.lua
 UI\MapBanner.lua
+UI\Shared.lua
+UI\Support.lua
 UI\Journal.lua
-UI\PageJournal.lua
-UI\PageAtlas.lua
-UI\PageFinds.lua
-UI\PageHallOfFame.lua
+UI\PageGuild.lua
+UI\PageMyJournal.lua
+UI\PageBestiary.lua
+UI\PageExpeditions.lua
+UI\PageLeaders.lua
+UI\PageSubmissions.lua
 UI\Toast.lua
+UI\MapPins.lua
 UI\MinimapButton.lua
+UI\GuildHooks.lua
+UI\Demo.lua

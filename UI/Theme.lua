@@ -1,11 +1,6 @@
--- The look. Two of them:
---   explorer  the League's own: dark slate panels, a turquoise cartographer's
---             accent, amber for points, and the real map of where you are
---             across the top of the window.
---   blizzard  the game's own windows: the metal rim, the rock backdrop, red
---             buttons and gold headings, worn from the client's own art.
--- Every widget paints itself through T.OnTheme, so switching looks (in the
--- journal's settings, or /loe look) repaints the whole addon at once.
+-- The look: an open book drawn flat and crisp, a dark cover, paper pages
+-- in dark ink, and a coloured ribbon bookmark for each section. Every
+-- widget paints itself through T.OnTheme with these colours.
 
 local _, ns = ...
 
@@ -17,71 +12,48 @@ T.WHITE = WHITE
 
 T.LOOKS = {
 	explorer = {
-		window     = { 0.050, 0.060, 0.070, 0.97 },
-		windowEdge = { 1, 1, 1, 0.09 },
-		tabBar     = { 1, 1, 1, 0.025 },
-		panel      = { 0.095, 0.110, 0.125, 0.94 },
-		panelEdge  = { 1, 1, 1, 0.07 },
-		panelTop   = { 1, 1, 1, 0.05 },             -- a faint lit edge along each panel's top
-		line       = { 1, 1, 1, 0.07 },
-		text       = { 0.90, 0.92, 0.93 },
-		subtle     = { 0.56, 0.62, 0.66 },
-		heading    = { 0.97, 0.98, 0.98 },
-		label      = { 0.42, 0.70, 0.67 },          -- small capitals above numbers
-		accent     = { 0.27, 0.82, 0.75 },          -- turquoise
-		points     = { 1.00, 0.76, 0.33 },          -- amber
-		done       = { 0.47, 0.84, 0.43 },
-		hover      = { 0.27, 0.82, 0.75, 0.07 },
-		select     = { 0.27, 0.82, 0.75, 0.14 },
-		stripe     = { 1, 1, 1, 0.018 },
-		track      = { 1, 1, 1, 0.08 },
-		thumb      = { 0.27, 0.82, 0.75, 0.45 },
-		btn        = { 0.27, 0.82, 0.75, 0.12 },    btnHover = { 0.27, 0.82, 0.75, 0.24 },
-		btnEdge    = { 0.27, 0.82, 0.75, 0.45 },    btnEdgeHover = { 0.27, 0.82, 0.75, 0.9 },
-		btnText    = { 0.80, 0.95, 0.92 },          btnTextHover = { 1, 1, 1 },
-		kinds = {
-			zone = { 0.27, 0.82, 0.75 }, zonefull = { 0.47, 0.84, 0.43 }, continent = { 1.00, 0.76, 0.33 },
-			area = { 0.45, 0.52, 0.56 }, rare = { 0.78, 0.58, 1.00 }, treasure = { 1.00, 0.84, 0.40 },
-		},
-	},
-	blizzard = {
-		skin = true,
-		window     = { 0.06, 0.055, 0.05, 0.97 },
-		windowEdge = { 0.62, 0.48, 0.27, 0.60 },
-		tabBar     = { 0, 0, 0, 0.25 },
-		panel      = { 0.02, 0.02, 0.02, 0.70 },
-		panelEdge  = { 0.62, 0.48, 0.27, 0.45 },
+		cover      = { 0.150, 0.098, 0.075, 0.99 },  -- the book's cover
+		coverEdge  = { 0.86, 0.66, 0.40, 0.35 },     -- a brass hairline round it
+		coverText  = { 0.93, 0.84, 0.66 },           -- buttons and words on the cover
+		page       = { 0.945, 0.915, 0.845, 1 },      -- paper
+		pageEdge   = { 0.55, 0.45, 0.33, 0.55 },      -- the stacked edges of the leaves
+		spine      = { 0.30, 0.20, 0.10 },            -- shading into the fold
+		window     = { 0.945, 0.915, 0.845, 1 },      -- (popovers sit on paper)
+		windowEdge = { 0.55, 0.45, 0.33, 0.55 },
+		panel      = { 0.30, 0.20, 0.10, 0.045 },     -- boxes ruled on the page
+		panelEdge  = { 0.30, 0.20, 0.10, 0.22 },
 		panelTop   = { 1, 1, 1, 0 },
-		line       = { 0.62, 0.48, 0.27, 0.30 },
-		text       = { 0.93, 0.92, 0.89 },
-		subtle     = { 0.66, 0.64, 0.60 },
-		heading    = { 1, 0.82, 0 },
-		label      = { 1, 0.82, 0, 0.75 },
-		accent     = { 1, 0.82, 0 },
-		points     = { 1, 0.82, 0 },
-		done       = { 0.12, 1, 0.12 },
-		hover      = { 1, 0.82, 0, 0.07 },
-		select     = { 1, 0.82, 0, 0.14 },
-		stripe     = { 1, 1, 1, 0.025 },
-		track      = { 1, 1, 1, 0.06 },
-		thumb      = { 0.62, 0.48, 0.27, 0.65 },
-		btn        = { 0.36, 0.05, 0.03, 1 },       btnHover = { 0.48, 0.08, 0.05, 1 },
-		btnEdge    = { 0.70, 0.55, 0.30, 0.65 },    btnEdgeHover = { 0.95, 0.80, 0.45, 0.9 },
-		btnText    = { 1, 0.82, 0 },                btnTextHover = { 1, 1, 1 },
-		-- Item-quality colours, as the game uses for its own finds.
+		line       = { 0.30, 0.20, 0.10, 0.18 },
+		text       = { 0.19, 0.14, 0.10 },
+		subtle     = { 0.45, 0.38, 0.31 },
+		heading    = { 0.13, 0.09, 0.06 },
+		label      = { 0.55, 0.36, 0.18 },            -- small capitals
+		accent     = { 0.10, 0.42, 0.46 },            -- sea-green ink
+		points     = { 0.66, 0.38, 0.05 },            -- amber ink
+		done       = { 0.20, 0.50, 0.22 },
+		hover      = { 0.30, 0.20, 0.10, 0.06 },
+		select     = { 0.10, 0.42, 0.46, 0.14 },
+		stripe     = { 0.30, 0.20, 0.10, 0.03 },
+		track      = { 0.30, 0.20, 0.10, 0.12 },
+		thumb      = { 0.30, 0.20, 0.10, 0.40 },
+		btn        = { 0.10, 0.42, 0.46, 0.10 },      btnHover = { 0.10, 0.42, 0.46, 0.20 },
+		btnEdge    = { 0.10, 0.42, 0.46, 0.55 },      btnEdgeHover = { 0.10, 0.42, 0.46, 1 },
+		btnText    = { 0.08, 0.34, 0.37 },            btnTextHover = { 0.03, 0.22, 0.24 },
+		-- One ribbon colour per bookmark.
+		ribbons = {
+			guild = { 0.55, 0.16, 0.14 }, journal = { 0.18, 0.40, 0.30 }, bestiary = { 0.20, 0.30, 0.52 },
+			expeditions = { 0.62, 0.42, 0.12 }, leaders = { 0.42, 0.22, 0.48 }, submissions = { 0.30, 0.34, 0.38 },
+		},
 		kinds = {
-			zone = { 1, 0.82, 0 }, zonefull = { 0.12, 1, 0.12 }, continent = { 1, 0.5, 0 },
-			area = { 0.62, 0.62, 0.62 }, rare = { 0.0, 0.44, 0.87 }, treasure = { 0.64, 0.21, 0.93 },
+			zone = { 0.10, 0.42, 0.46 }, zonefull = { 0.20, 0.50, 0.22 }, continent = { 0.66, 0.38, 0.05 },
+			area = { 0.55, 0.48, 0.40 }, rare = { 0.42, 0.22, 0.60 }, treasure = { 0.70, 0.50, 0.08 },
+			place = { 0.62, 0.24, 0.30 }, milestone = { 0.80, 0.58, 0.12 }, weekly = { 0.10, 0.42, 0.46 },
+			alert = { 0.78, 0.30, 0.12 }, bounty = { 0.70, 0.50, 0.08 }, expedition = { 0.10, 0.42, 0.46 },
 		},
 	},
 }
 
-function T.Look()
-	local s = ns.db and ns.db.settings
-	return T.LOOKS[s and s.look or "explorer"] or T.LOOKS.explorer
-end
-
-function T.Skinned() return T.Look().skin == true end
+function T.Look() return T.LOOKS.explorer end
 
 function T.KindColor(kind)
 	local k = T.Look().kinds
@@ -113,17 +85,6 @@ function T.OnTheme(fn)
 	if not ok then geterrorhandler()(err) end
 end
 
-function T.SetLook(name)
-	if not T.LOOKS[name] then return end
-	ns.db.settings.look = name
-	local look = T.Look()
-	for _, fn in ipairs(painters) do
-		local ok, err = pcall(fn, look)
-		if not ok then geterrorhandler()(err) end
-	end
-	ns.Fire("LOOK_CHANGED", name)
-end
-
 ---------------------------------------------------------------------------
 -- Fonts: the game's reading font in fixed sizes. "Shadow" variants are for
 -- text over the map and the window; text in panels has a lighter shadow.
@@ -136,8 +97,8 @@ for name, size in pairs(SIZES) do
 		local f = CreateFont("LeagueOfExplorersFont" .. name .. (strong and "Shadow" or ""))
 		f:SetFont(face, size, "")
 		f:SetTextColor(1, 1, 1)
-		f:SetShadowColor(0, 0, 0, strong and 0.95 or 0.5)
-		f:SetShadowOffset(1, -1)
+		f:SetShadowColor(0, 0, 0, 0.95)
+		f:SetShadowOffset(strong and 1 or 0, strong and -1 or 0)
 		T.FONTS[name .. (strong and "Shadow" or "")] = f
 	end
 end
@@ -289,78 +250,6 @@ function T.Circle(parent, size, layer, sub)
 end
 
 ---------------------------------------------------------------------------
--- The game's own frame art, for the Blizzard look. Nothing is shipped: the
--- art is read from the client's templates, and anything this client lacks
--- falls back to flat drawing.
----------------------------------------------------------------------------
-local Skin = {}
-T.Skin = Skin
-
--- One of the game's nine-slice layouts on a frame above `f`'s content, or nil.
-function Skin.NineSlice(f, layout, lift)
-	local NS = rawget(_G, "NineSliceUtil")
-	if not (NS and NS.ApplyLayoutByName) then return nil end
-	local ok, frame = pcall(CreateFrame, "Frame", nil, f, "NineSlicePanelTemplate")
-	if not ok or not frame then return nil end
-	frame:SetAllPoints()
-	local applied = pcall(NS.ApplyLayoutByName, frame, layout)
-	local piece = applied and (frame.TopLeftCorner or frame.TopEdge)
-	if not (piece and ((piece.GetAtlas and piece:GetAtlas()) or piece:GetTexture())) then
-		frame:Hide()
-		return nil
-	end
-	frame:EnableMouse(false)
-	frame:SetFrameLevel(f:GetFrameLevel() + (lift or 1))
-	return frame
-end
-
-Skin.ROCK = "Interface\\FrameGeneral\\UI-Background-Rock"
-
--- What a texture is drawing right now (atlas, or file and coords), or nil.
-local function snap(tex)
-	if not tex then return nil end
-	local atlas = tex.GetAtlas and tex:GetAtlas()
-	if atlas and atlas ~= "" then return { atlas = atlas } end
-	local file = tex:GetTexture()
-	if not file then return nil end
-	return { file = file, coords = { tex:GetTexCoord() } }
-end
-
-function Skin.Paint(tex, s)
-	if not s then
-		tex:Hide()
-		return
-	end
-	if s.atlas then
-		tex:SetAtlas(s.atlas)
-	else
-		tex:SetTexture(s.file)
-		tex:SetTexCoord(unpack(s.coords))
-	end
-	tex:Show()
-end
-
--- The red panel button's three pieces, read once from the game's template.
-local buttonArt
-function Skin.ButtonArt()
-	if buttonArt == nil then
-		buttonArt = false
-		local ok, b = pcall(CreateFrame, "Button", nil, UIParent, "UIPanelButtonTemplate")
-		if ok and b then
-			b:Hide()
-			b:SetSize(110, 22)
-			if type(b.Left) == "table" and type(b.Middle) == "table" and type(b.Right) == "table" then
-				local art = { cap = b.Left:GetWidth(), snap(b.Left), snap(b.Middle), snap(b.Right),
-					highlight = snap(b:GetHighlightTexture()) }
-				if not (art.cap and art.cap > 1) then art.cap = 12 end
-				if art[1] and art[2] and art[3] then buttonArt = art end
-			end
-		end
-	end
-	return buttonArt or nil
-end
-
----------------------------------------------------------------------------
 -- Motion: one driver runs every tween; apply() gets the eased progress.
 ---------------------------------------------------------------------------
 local tweens, progress = {}, setmetatable({}, { __mode = "k" })
@@ -390,6 +279,7 @@ function T.Tween(key, target, dur, apply, ease)
 end
 
 function T.Progress(key) return progress[key] or 0 end
+function T.SetProgress(key, p) progress[key] = p end
 
 function T.FadeIn(frame, dur)
 	progress[frame] = 0

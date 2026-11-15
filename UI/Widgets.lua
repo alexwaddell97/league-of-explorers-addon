@@ -3,7 +3,7 @@
 local _, ns = ...
 
 local T = ns.Theme
-local WHITE, Skin = T.WHITE, T.Skin
+local WHITE = T.WHITE
 local W = {}
 ns.Widgets = W
 
@@ -16,8 +16,7 @@ W.Sound = sound
 -- Panels
 ---------------------------------------------------------------------------
 
--- A slate panel with a faint lit top edge; under the Blizzard look, the
--- game's inset frame on a dark wash.
+-- A box ruled on the page: a faint wash and a fine ink edge.
 function W.Panel(parent)
 	local p = CreateFrame("Frame", nil, parent)
 	p.bg = p:CreateTexture(nil, "BACKGROUND")
@@ -31,10 +30,6 @@ function W.Panel(parent)
 	T.OnTheme(function(look)
 		T.Fill(p.bg, look.panel)
 		p.top:SetVertexColor(look.panelTop[1], look.panelTop[2], look.panelTop[3], look.panelTop[4])
-		if look.skin and p.inset == nil then p.inset = Skin.NineSlice(p, "InsetFrameTemplate", 3) or false end
-		local inset = look.skin and p.inset or nil
-		if p.inset then p.inset:SetShown(inset and true or false) end
-		p.edge:SetShown(not inset)
 		local e = look.panelEdge
 		p.edge:SetColor(e[1], e[2], e[3], e[4])
 	end)
@@ -54,8 +49,7 @@ end
 -- Buttons
 ---------------------------------------------------------------------------
 
--- A flat outlined button in the Explorer look; the game's red button in
--- the Blizzard look.
+-- A flat outlined button in ink.
 function W.Button(parent, text, w, h, onClick)
 	local b = CreateFrame("Button", nil, parent)
 	b:SetSize(w or 120, h or 24)
@@ -63,20 +57,6 @@ function W.Button(parent, text, w, h, onClick)
 	b.bg:SetAllPoints()
 	b.bg:SetTexture(WHITE)
 	b.edge = T.Border(b)
-	b.pieces = {}
-	for i = 1, 3 do
-		b.pieces[i] = b:CreateTexture(nil, "BACKGROUND", nil, 1)
-		b.pieces[i]:Hide()
-	end
-	b.pieces[1]:SetPoint("TOPLEFT")
-	b.pieces[1]:SetPoint("BOTTOMLEFT")
-	b.pieces[3]:SetPoint("TOPRIGHT")
-	b.pieces[3]:SetPoint("BOTTOMRIGHT")
-	b.pieces[2]:SetPoint("TOPLEFT", b.pieces[1], "TOPRIGHT")
-	b.pieces[2]:SetPoint("BOTTOMRIGHT", b.pieces[3], "BOTTOMLEFT")
-	b.hl = b:CreateTexture(nil, "HIGHLIGHT")
-	b.hl:SetAllPoints()
-	b.hl:Hide()
 	b.label = b:CreateFontString(nil, "OVERLAY")
 	b.label:SetFontObject(T.FONTS.Small)
 	b.label:SetPoint("LEFT", 8, 0)
@@ -88,24 +68,10 @@ function W.Button(parent, text, w, h, onClick)
 
 	local function paint(p)
 		local look = T.Look()
-		local art = look.skin and Skin.ButtonArt()
-		for i = 1, 3 do
-			if art then Skin.Paint(b.pieces[i], art[i]) else b.pieces[i]:Hide() end
-		end
-		if art then
-			b.pieces[1]:SetWidth(art.cap)
-			b.pieces[3]:SetWidth(art.cap)
-			Skin.Paint(b.hl, art.highlight)
-		else
-			b.hl:Hide()
-		end
-		b.bg:SetShown(not art)
-		b.edge:SetShown(not art)
 		b.bg:SetVertexColor(T.Mix(look.btn, look.btnHover, p))
 		b.edge:SetColor(T.Mix(look.btnEdge, look.btnEdgeHover, p))
 		local r, g, bl, a = T.Mix(look.btnText, look.btnTextHover, p)
 		b.label:SetTextColor(r, g, bl, b:IsEnabled() and a or a * 0.4)
-		for i = 1, 3 do b.pieces[i]:SetDesaturated(not b:IsEnabled()) end
 	end
 	b:SetScript("OnEnter", function(self) if self:IsEnabled() then T.Tween(self, 1, 0.12, paint) end end)
 	b:SetScript("OnLeave", function(self) T.Tween(self, 0, 0.12, paint) end)
@@ -382,7 +348,7 @@ function W.Dots(parent, size, gap, max)
 			if i <= (n or 0) then
 				d:SetVertexColor(on[1], on[2], on[3], 1)
 			else
-				d:SetVertexColor(1, 1, 1, look.skin and 0.18 or 0.14)
+				d:SetVertexColor(1, 1, 1, 0.14)
 			end
 			d:Show()
 		end
@@ -661,8 +627,9 @@ function W.List(parent, w, h, rowH, o)
 			sf:SetVerticalScroll(maxScroll)
 		end
 		local empty = #self.items == 0
-		self.empty:SetShown(empty)
-		self.emptyIcon:SetShown(empty)
+		local hasText = (o.emptyText or "x") ~= ""
+		self.empty:SetShown(empty and hasText)
+		self.emptyIcon:SetShown(empty and hasText)
 		self:Render()
 		self.scrollBar.Update()
 	end
@@ -706,4 +673,390 @@ function W.TimelineFill(row, kind, dateText, text, rightText, first, last)
 	row.thread:SetPoint("TOP", row, first and "LEFT" or "TOPLEFT", 14, 0)
 	row.thread:SetPoint("BOTTOM", row, last and "LEFT" or "BOTTOMLEFT", 14, 0)
 	row.thread:SetShown(not (first and last))
+end
+
+---------------------------------------------------------------------------
+-- The rank bar: like the game's experience bar, a long bar ticked into
+-- twenty, with the rank you hold on the left and the next on the right.
+---------------------------------------------------------------------------
+function W.RankBar(parent, w)
+	local f = CreateFrame("Frame", nil, parent)
+	f:SetSize(w, 52)
+	f.rank = T.Text(f, "", "Title", "heading")
+	f.rank:SetPoint("TOPLEFT")
+	f.next = T.Text(f, "", "Small", "subtle")
+	f.next:SetPoint("BOTTOMRIGHT", f.rank, "BOTTOMRIGHT", 0, 0)
+	f.next:ClearAllPoints()
+	f.next:SetPoint("TOPRIGHT", 0, -3)
+	f.next:SetJustifyH("RIGHT")
+	f.bar = W.Bar(f, w, 9)
+	f.bar:SetPoint("TOPLEFT", 0, -24)
+	f.ticks = {}
+	for i = 1, 19 do
+		local t = T.Line(f.bar, true, nil, "OVERLAY")
+		t:SetPoint("TOP", f.bar, "TOPLEFT", w * i / 20, 0)
+		t:SetPoint("BOTTOM", f.bar, "BOTTOMLEFT", w * i / 20, 0)
+		f.ticks[i] = t
+	end
+	f.edge = T.Border(f.bar, "panelEdge")
+	f.note = T.Text(f, "", "Small", "subtle", w)
+	f.note:SetPoint("TOPLEFT", f.bar, "BOTTOMLEFT", 0, -5)
+	T.OnTheme(function(look)
+		local c = look.line
+		for _, t in ipairs(f.ticks) do t:SetVertexColor(c[1], c[2], c[3], (c[4] or 1) * 1.4) end
+	end)
+	-- who: the character whose player's rank to show. The note lists what
+	-- the next rank asks for, with how far along each deed is.
+	function f:SetWho(who)
+		local P = ns.Points
+		local _, cur, nxt, p, asks = P.RankOf(who)
+		self.rank:SetText(cur.name)
+		self.bar:SetProgress(p, 1, not nxt)
+		if not nxt then
+			self.next:SetText("Highest rank")
+			self.note:SetText(("%s points earned"):format(T.Number(P.Total(who))))
+			return
+		end
+		self.next:SetText("Next: " .. nxt.name)
+		local look = T.Look()
+		local bits = {}
+		for _, a in ipairs(asks) do
+			local done = a.have >= a.need
+			local c = done and look.done or look.subtle
+			bits[#bits + 1] = ("|cff%s%s %d/%d|r"):format(T.Hex(c), a.label, math.min(a.have, a.need), a.need)
+		end
+		self.note:SetText(table.concat(bits, "   "))
+	end
+	return f
+end
+
+---------------------------------------------------------------------------
+-- A creature's portrait: the game's own 3D model of it in a small frame.
+-- Two models: one lit as usual, for creatures you have found; one with
+-- every light turned to nothing, which draws the creature as a solid black
+-- shape, for the ones still in shadow.
+---------------------------------------------------------------------------
+
+-- No light at all on a model: it renders as its black silhouette. The
+-- client takes a light description table (newer) or a list of numbers
+-- (older); both are tried. Fog is added as a second shade where it works.
+local function blackOut(m)
+	local done = false
+	if CreateColor and CreateVector3D then
+		done = pcall(m.SetLight, m, true, {
+			omnidirectional = false, point = CreateVector3D(-1, 1, -1),
+			ambientIntensity = 0, ambientColor = CreateColor(0, 0, 0),
+			diffuseIntensity = 0, diffuseColor = CreateColor(0, 0, 0),
+		})
+	end
+	if not done then pcall(m.SetLight, m, true, false, -1, 1, -1, 0, 0, 0, 0, 0, 0, 0, 0) end
+	pcall(m.SetFogColor, m, 0, 0, 0, 1)
+	pcall(m.SetFogNear, m, 0)
+	pcall(m.SetFogFar, m, 0.1)
+	-- Flames, sparks and glowing parts light themselves, so no lighting
+	-- darkens them: particles off, and what still glows drained of colour.
+	if m.SetParticlesEnabled then pcall(m.SetParticlesEnabled, m, false) end
+	if m.SetDesaturation then pcall(m.SetDesaturation, m, 1) end
+end
+
+-- How the camera frames the model: zoom 0 is the whole creature, 1 its
+-- head; cam > 1 steps back. Loading a model resets both (and the lights),
+-- so they are set again each time one comes in.
+local function frame(m)
+	if m.SetPortraitZoom then m:SetPortraitZoom(m.zoom or 0) end
+	if m.SetCamDistanceScale then m:SetCamDistanceScale(m.cam or 1) end
+end
+
+-- Has the model anything in it yet?
+local function hasModel(m)
+	if m.loaded then return true end
+	if m.GetModelFileID then
+		local ok, id = pcall(m.GetModelFileID, m)
+		if ok and type(id) == "number" and id > 0 then return true end
+	end
+	return false
+end
+
+-- Puts the wanted creature in the model. Its display ID first (read from
+-- the creature when someone saw it); failing that, by creature ID, which
+-- only works once the client has the creature's details, so it may take a
+-- second try (see newModel).
+local function apply(m, byId)
+	local o = m.want
+	if not o then return end
+	m.loaded = false
+	m:ClearModel()
+	local done = false
+	if o.display and not byId then done = pcall(m.SetDisplayInfo, m, o.display) end
+	if not done and o.id then pcall(m.SetCreature, m, o.id) end
+	frame(m)
+	if m.dark then blackOut(m) end
+end
+
+-- Tries again a few times while the model is still empty: the game asks
+-- the server about a creature it hasn't seen and fills it in later.
+local RETRY = { 0.3, 1, 2.5, 5, 10 }
+local function retry(m, n)
+	n = n or 1
+	local token = m.token
+	ns.After(RETRY[n], function()
+		if m.token ~= token or not m.want or hasModel(m) then return end
+		if not m:IsVisible() then
+			m.stale = true -- tried again when it's next shown
+			return
+		end
+		-- Every other try by creature ID, in case the display ID is the problem.
+		apply(m, n % 2 == 0)
+		if RETRY[n + 1] then retry(m, n + 1) end
+	end)
+end
+
+local function newModel(f, dark, zoom, cam)
+	local ok, m = pcall(CreateFrame, "PlayerModel", nil, f)
+	if not (ok and m) then return nil end
+	m:SetPoint("TOPLEFT", 1, -1)
+	m:SetPoint("BOTTOMRIGHT", -1, 1)
+	m.zoom, m.cam, m.dark, m.token = zoom, cam, dark, 0
+	if dark then blackOut(m) end
+	m:SetScript("OnModelLoaded", function(self)
+		self.loaded = true
+		frame(self)
+		if dark then blackOut(self) end
+	end)
+	-- A model given its creature while hidden (a page not open yet, the
+	-- book shut) can come up empty: give it again when it shows.
+	m:SetScript("OnShow", function(self)
+		if self.want and (self.stale or not hasModel(self)) then
+			self.stale = false
+			self.token = self.token + 1
+			apply(self)
+			retry(self)
+		end
+	end)
+	m:Hide()
+	return m
+end
+
+-- zoom: 0 the whole creature (a large portrait), up to 1 its head (a
+-- small tile); cam steps the camera back from it (1 is the game's own).
+function W.Portrait(parent, size, zoom, cam)
+	local f = CreateFrame("Button", nil, parent)
+	f:SetSize(size, size)
+	f.bg = f:CreateTexture(nil, "BACKGROUND")
+	f.bg:SetAllPoints()
+	f.edge = T.Border(f)
+	f.lit = newModel(f, false, zoom or 0.6, cam)
+	f.dark = newModel(f, true, zoom or 0.6, cam)
+	-- Words and marks sit on a layer above the models.
+	f.top = CreateFrame("Frame", nil, f)
+	f.top:SetAllPoints()
+	f.top:SetFrameLevel(f:GetFrameLevel() + 5)
+	f.mystery = f.top:CreateFontString(nil, "OVERLAY")
+	f.mystery:SetFontObject(T.FONTS.Display)
+	f.mystery:SetPoint("CENTER", 0, 2)
+	f.mystery:SetText("?")
+	f.name = T.Text(f.top, "", "Label", "text", size - 6)
+	f.name:SetPoint("BOTTOM", 0, 4)
+	f.name:SetJustifyH("CENTER")
+	f.name:SetWordWrap(false)
+	f.sel = f.top:CreateTexture(nil, "OVERLAY", nil, 2)
+	f.sel:SetPoint("BOTTOMLEFT")
+	f.sel:SetPoint("BOTTOMRIGHT")
+	f.sel:SetHeight(2)
+	f.sel:SetTexture(T.WHITE)
+	f.sel:Hide()
+	-- Hover wash on the top layer (a highlight texture there would never
+	-- see the mouse, which goes to the button beneath).
+	f.hl = f.top:CreateTexture(nil, "OVERLAY")
+	f.hl:SetAllPoints()
+	f.hl:Hide()
+	f:SetScript("OnEnter", function() f.hl:Show() end)
+	f:SetScript("OnLeave", function() f.hl:Hide() end)
+	T.OnTheme(function(look)
+		T.Fill(f.bg, look.panel)
+		local e = look.panelEdge
+		f.edge:SetColor(e[1], e[2], e[3], e[4])
+		T.Fill(f.hl, look.hover)
+		f.sel:SetVertexColor(look.accent[1], look.accent[2], look.accent[3], 1)
+		local sb = look.subtle
+		f.mystery:SetTextColor(sb[1], sb[2], sb[3], 0.85)
+	end)
+	f.top:EnableMouse(false)
+
+	local function load(m, o, key)
+		if not m then return end
+		f.active = m
+		if m.shownId ~= key or not hasModel(m) then
+			m.shownId = key
+			m.want = { id = o.id, display = o.display }
+			m.token = m.token + 1
+			m.stale = not m:IsVisible()
+			apply(m)
+			retry(m)
+		end
+		m:SetShown(not f.modelsOff)
+	end
+
+	-- 3D models ignore a scroll frame's edges and would draw over whatever
+	-- is above or below it: a tile not wholly in view keeps its box but
+	-- puts its creature away.
+	function f:SetModelsOff(off)
+		off = off and true or false
+		if self.modelsOff == off then return end
+		self.modelsOff = off
+		if self.active then self.active:SetShown(not off) end
+	end
+
+	-- The models in a box of their own, centred: the game's camera fits a
+	-- model to its frame's shape, and a wide frame crops tall creatures.
+	function f:SetModelBox(w, h)
+		for _, m in ipairs({ self.lit, self.dark }) do
+			if m then
+				m:ClearAllPoints()
+				m:SetSize(w, h)
+				m:SetPoint("CENTER")
+			end
+		end
+	end
+
+	-- o = { id, display, name, state, selected }: state "mine" (in full
+	-- colour), "guild" (black silhouette, named) or "unknown" (black
+	-- silhouette with a "?"). known = true means "mine".
+	function f:Set(o)
+		local state = o.state or (o.known and "mine" or "unknown")
+		local key = o.display or o.id
+		self.sel:SetShown(o.selected and true or false)
+		self.name:SetText(state ~= "unknown" and (o.name or "") or "")
+		self.mystery:SetShown(state == "unknown")
+		if state == "mine" then
+			if self.dark then self.dark:Hide() end
+			load(self.lit, o, key)
+		else
+			if self.lit then self.lit:Hide() end
+			load(self.dark, o, key)
+		end
+	end
+	return f
+end
+
+---------------------------------------------------------------------------
+-- Personal notes: a multi-line box written in, saved as you type.
+---------------------------------------------------------------------------
+function W.Notes(parent, w, h, placeholder, onChange)
+	local f = CreateFrame("Frame", nil, parent)
+	f:SetSize(w, h)
+	f.bg = f:CreateTexture(nil, "BACKGROUND")
+	f.bg:SetAllPoints()
+	f.edge = T.Border(f)
+	local sf = CreateFrame("ScrollFrame", nil, f)
+	sf:SetPoint("TOPLEFT", 8, -6)
+	sf:SetPoint("BOTTOMRIGHT", -8, 6)
+	local edit = CreateFrame("EditBox", nil, sf)
+	edit:SetMultiLine(true)
+	edit:SetAutoFocus(false)
+	edit:SetFontObject(T.FONTS.Body)
+	edit:SetWidth(w - 16)
+	edit:SetMaxLetters(600)
+	sf:SetScrollChild(edit)
+	f.edit = edit
+	f.hint = T.Text(f, placeholder or "", "Body", "subtle", w - 16)
+	f.hint:SetPoint("TOPLEFT", 8, -6)
+	f:EnableMouse(true)
+	f:SetScript("OnMouseDown", function() edit:SetFocus() end)
+	edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+	edit:SetScript("OnTextChanged", function(self, user)
+		f.hint:SetShown(self:GetText() == "")
+		if user and onChange then onChange(self:GetText()) end
+	end)
+	edit:SetScript("OnEditFocusGained", function()
+		local a = T.Look().accent
+		f.edge:SetColor(a[1], a[2], a[3], 0.9)
+	end)
+	edit:SetScript("OnEditFocusLost", function()
+		local e = T.Look().panelEdge
+		f.edge:SetColor(e[1], e[2], e[3], e[4])
+	end)
+	T.OnTheme(function(look)
+		T.Fill(f.bg, look.panel)
+		local e = look.panelEdge
+		f.edge:SetColor(e[1], e[2], e[3], e[4])
+		local t = look.text
+		edit:SetTextColor(t[1], t[2], t[3])
+	end)
+	function f:SetText(text)
+		edit:SetText(text or "")
+		self.hint:SetShown((text or "") == "")
+	end
+	return f
+end
+
+---------------------------------------------------------------------------
+-- A one-line text field with a placeholder, ruled like the page's boxes.
+---------------------------------------------------------------------------
+function W.Field(parent, w, placeholder, maxLetters, onChange)
+	local f = CreateFrame("Frame", nil, parent)
+	f:SetSize(w, 26)
+	f.bg = f:CreateTexture(nil, "BACKGROUND")
+	f.bg:SetAllPoints()
+	f.edge = T.Border(f)
+	local edit = CreateFrame("EditBox", nil, f)
+	edit:SetPoint("TOPLEFT", 8, 0)
+	edit:SetPoint("BOTTOMRIGHT", -8, 0)
+	edit:SetAutoFocus(false)
+	edit:SetFontObject(T.FONTS.Body)
+	edit:SetMaxLetters(maxLetters or 48)
+	f.edit = edit
+	f.hint = T.Text(f, placeholder or "", "Body", "subtle")
+	f.hint:SetPoint("LEFT", 8, 0)
+	f:EnableMouse(true)
+	f:SetScript("OnMouseDown", function() edit:SetFocus() end)
+	edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+	edit:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+	edit:SetScript("OnTextChanged", function(self, user)
+		f.hint:SetShown(self:GetText() == "")
+		if user and onChange then onChange(self:GetText()) end
+	end)
+	local function edge(focus)
+		local look = T.Look()
+		local c = focus and look.accent or look.panelEdge
+		f.edge:SetColor(c[1], c[2], c[3], focus and 0.9 or c[4])
+	end
+	edit:SetScript("OnEditFocusGained", function() edge(true) end)
+	edit:SetScript("OnEditFocusLost", function() edge(false) end)
+	T.OnTheme(function(look)
+		T.Fill(f.bg, look.panel)
+		edge(edit:HasFocus())
+		local t = look.text
+		edit:SetTextColor(t[1], t[2], t[3])
+	end)
+	function f:GetValue() return (edit:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "") end
+	function f:SetValue(text)
+		edit:SetText(text or "")
+		self.hint:SetShown((text or "") == "")
+	end
+	return f
+end
+
+-- A small square tick box for list rows.
+function W.Tick(parent, size)
+	local b = CreateFrame("Frame", nil, parent)
+	b:SetSize(size or 14, size or 14)
+	b.bg = b:CreateTexture(nil, "BACKGROUND")
+	b.bg:SetAllPoints()
+	b.edge = T.Border(b)
+	b.fill = b:CreateTexture(nil, "ARTWORK")
+	b.fill:SetPoint("TOPLEFT", 3, -3)
+	b.fill:SetPoint("BOTTOMRIGHT", -3, 3)
+	b.fill:SetTexture(T.WHITE)
+	function b:SetChecked(on, color)
+		local look = T.Look()
+		T.Fill(self.bg, look.panel)
+		local e = look.panelEdge
+		self.edge:SetColor(e[1], e[2], e[3], 0.8)
+		local c = color or look.accent
+		self.fill:SetVertexColor(c[1], c[2], c[3], 1)
+		self.fill:SetShown(on and true or false)
+	end
+	b:SetChecked(false)
+	return b
 end

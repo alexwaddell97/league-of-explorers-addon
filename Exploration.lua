@@ -223,7 +223,7 @@ local function takeBaseline(ch)
 	end
 	ch.baselineAt = ns.Now()
 	shareBaseline(ch)
-	ns.Print(("Your journal is open. %d zones and %d areas you had already explored are written in, without points; new discoveries from here on earn them."):format(zones, areas))
+	ns.Print(("Added %d zones and %d areas you had already explored. These count toward your rank but not points. New discoveries earn points."):format(zones, areas))
 end
 
 ---------------------------------------------------------------------------
@@ -265,7 +265,10 @@ function E.Check()
 	end
 
 	local areas = ns.Areas[zone]
-	if not areas then return end
+	if not areas then
+		if ns.Work then ns.Work.Check("zone", zone, { map = zone }) end
+		return
+	end
 	local set = E.ExploredSet(zone)
 	local n = 0
 	for _, id in ipairs(areas) do
@@ -282,6 +285,7 @@ function E.Check()
 		rec.full = ns.Now()
 		ns.Ledger.Award("zonefull", zone, { map = zone, name = zoneName })
 	end
+	if ns.Work then ns.Work.Check("zone", zone, { map = zone, full = rec.full ~= nil }) end
 end
 
 -- Many events can fire together (zone change, discovery, map update); they
@@ -352,14 +356,14 @@ end)
 ns.Commands.status = function()
 	local api = C_MapExplorationInfo and C_MapExplorationInfo.GetExploredMapTextures
 	ns.Print("exploration API:", api and "yes" or "MISSING")
-	ns.Print(("atlas: %d zones on %d maps, %d charted areas (data build %s)"):format(
+	ns.Print(("maps: %d zones on %d continents, %d areas (data build %s)"):format(
 		E.ZoneCount(), #E.Atlas(), E.AreaCount(), tostring(ns.AREA_BUILD)))
 	local zone = E.CurrentZone()
 	if zone then
 		local n, total = E.Progress(zone)
 		ns.Print(("here: %s (%d), %d of %d areas"):format(ns.MapName(zone) or "?", zone, n, total))
 	else
-		ns.Print("here: not in a zone the atlas tracks")
+		ns.Print("here: not in a tracked zone")
 	end
 	if ns.Rares and ns.Rares.Status then ns.Rares.Status() end
 end

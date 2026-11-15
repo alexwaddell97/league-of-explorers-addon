@@ -17,7 +17,25 @@ ns.Ledger = L
 
 -- base: a zone known before the journal was begun, worth nothing; its mask
 -- holds the areas already charted then (see Exploration.lua).
-L.KINDS = { zone = true, zonefull = true, continent = true, area = true, rare = true, treasure = true, base = true }
+-- The guild's own records travel as entries too (see Work.lua):
+--   exp   an officer's expedition or bounty     expx  an officer withdrawing one
+--   hunt  a member meeting one of its goals     sub   a member's submission
+--   rev   an officer's review of a submission   cfg   the guild master's settings
+--   main  a character naming its player's main     weekly a weekly hunt target met
+--   place a place the guild has charted, found (a discovery, worth points)
+--   kill  a rare killed (worth nothing itself; bounties and hunts ask for it)
+L.KINDS = {
+	zone = true, zonefull = true, continent = true, area = true, rare = true, treasure = true, base = true,
+	exp = true, expx = true, hunt = true, sub = true, rev = true, cfg = true,
+	main = true, weekly = true, place = true, kill = true,
+}
+
+-- Kinds that are records rather than discoveries: never listed with the
+-- discoveries, only when asked for by kind.
+L.HIDDEN = { base = true, exp = true, expx = true, hunt = true, sub = true, rev = true, cfg = true, main = true, weekly = true, kill = true }
+
+-- Kinds only an officer may write; cfg only the guild master.
+L.OFFICER = { exp = true, expx = true, rev = true }
 
 -- who -> { ["kind:key"] = entry }; id -> entry; "kind:key" -> the guild's
 -- first entry for it; who -> highest seq held. Rebuilt from entries on load.
@@ -43,7 +61,8 @@ local function indexEntry(e)
 	byId[e.id] = e
 	local f = firsts[k]
 	if not f or earlier(e, f) then firsts[k] = e end
-	if (e.seq or 0) > (maxSeq[e.who] or 0) then maxSeq[e.who] = e.seq end
+	-- Preview entries never travel, so digests don't count them.
+	if not e.test and (e.seq or 0) > (maxSeq[e.who] or 0) then maxSeq[e.who] = e.seq end
 end
 
 local function rebuild()
@@ -55,7 +74,35 @@ local function rebuild()
 	end
 end
 L.Rebuild = rebuild
-ns.Listen("DB_READY", rebuild)
+-- Demo entries (see UI/Demo.lua) never outlive the demo: any left by a
+-- reload mid-tour are cleared when the journal loads.
+local function dropDemo()
+	local kept = {}
+	for _, e in ipairs(ns.db.entries) do
+		if not e.demo then kept[#kept + 1] = e end
+	end
+	ns.db.entries = kept
+end
+
+ns.Listen("DB_READY", function()
+	dropDemo()
+	rebuild()
+end)
+
+-- Adds a demo entry as it is (any author), kept on this computer only.
+function L.AddDemo(e)
+	e.test, e.demo = true, true
+	e.id = e.who .. "#" .. e.seq
+	table.insert(ns.db.entries, e)
+	indexEntry(e)
+	return e
+end
+
+-- Removes every demo entry.
+function L.ClearDemo()
+	dropDemo()
+	rebuild()
+end
 
 function L.Has(kind, key, who)
 	who = who or ns.Me()
@@ -82,7 +129,8 @@ function L.IsFirst(e)
 end
 
 -- Fields an entry may carry besides its identity.
-local FIELDS = { "name", "map", "x", "y", "note", "mask" }
+-- test marks an entry made in officer preview: kept on this computer only.
+local FIELDS = { "name", "map", "x", "y", "note", "mask", "test" }
 
 -- Writes an entry for the logged-in character unless it already has one for
 -- this kind and key. Returns the new entry, or nil when nothing was written.
@@ -114,12 +162,14 @@ function L.Merge(e, authored, via)
 	if type(e.seq) ~= "number" or e.seq < 1 or e.seq % 1 ~= 0 then return nil end
 	if type(e.t) ~= "number" or e.t < 1700000000 or e.t > ns.Now() + 600 then return nil end
 	if e.key == nil then return nil end
+	if L.OFFICER[e.kind] and not (ns.Work and ns.Work.IsOfficer(e.who)) then return nil end
+	if e.kind == "cfg" and not (ns.Work and ns.Work.IsLeader(e.who)) then return nil end
 	local id = e.who .. "#" .. e.seq
 	local have = byId[id]
 	if have then
 		if not (authored and have.via) then return nil end
 		-- The author's copy replaces a relayed one.
-		for _, f in ipairs({ "t", "kind", "key", "name", "map", "x", "y", "mask" }) do have[f] = e[f] end
+		for _, f in ipairs({ "t", "kind", "key", "name", "map", "x", "y", "mask", "note" }) do have[f] = e[f] end
 		have.via = nil
 		rebuild()
 		ns.Fire("ENTRY_MERGED", have)
@@ -149,7 +199,7 @@ function L.Query(filter)
 		if (not filter.who or e.who == filter.who)
 			and (not filter.whoIn or filter.whoIn[e.who])
 			and (not filter.kind or e.kind == filter.kind)
-			and (e.kind ~= "base" or filter.kind == "base" or filter.all)
+			and (not L.HIDDEN[e.kind] or filter.kind == e.kind or filter.all)
 			and (not filter.kinds or filter.kinds[e.kind])
 			and (not filter.since or e.t >= filter.since)
 			and (not filter.map or e.map == filter.map)
@@ -168,15 +218,16 @@ end
 local PHRASE = {
 	zone = "Discovered %s",
 	zonefull = "Fully explored %s",
-	continent = "Set foot on %s",
-	area = "Charted %s",
+	continent = "Reached %s",
+	area = "Explored %s",
 	rare = "Found %s",
 	treasure = "Found %s",
+	place = "Visited %s",
 }
 
 function L.Describe(e)
 	local name = e.name
 	if not name and e.map then name = ns.MapName(e.map) end
-	name = name or "an uncharted place"
+	name = name or "an unknown area"
 	return (PHRASE[e.kind] or "%s"):format(name)
 end

@@ -10,6 +10,7 @@
 -- Each sighting goes into the bestiary (db.finds). The first sighting of a
 -- living rare, or of a treasure, by a character also writes a ledger entry,
 -- which is what earns points; later sightings are logged but earn nothing.
+-- Kills are worked out separately (see Kills below).
 -- Unit reads can be secret values on this client: those read as unknown
 -- and the unit is passed over.
 
@@ -67,7 +68,7 @@ end
 -- Recording
 ---------------------------------------------------------------------------
 
-function R.Record(kind, id, name, where, dead, source)
+function R.Record(kind, id, name, where, dead, source, display)
 	if not id then return end
 	local me = ns.Me()
 	if not me then return end
@@ -78,6 +79,7 @@ function R.Record(kind, id, name, where, dead, source)
 		ns.db.finds[key] = f
 	end
 	if name and name ~= "" then f.name = name end
+	if display then f.display = display end
 	where = where or playerWhere() or {}
 	local zone = where.map and ns.Exploration.ZoneOf(where.map) or where.map
 	local now = ns.Now()
@@ -102,6 +104,7 @@ function R.Record(kind, id, name, where, dead, source)
 	-- Only a living rare counts as found: a corpse someone else left does not.
 	if not dead then
 		ns.Ledger.Award(kind, id, { name = f.name, map = zone, x = where.x, y = where.y })
+		if kind == "rare" and ns.Work then ns.Work.Check("rare", id, { map = zone, x = where.x, y = where.y }) end
 	end
 	ns.Fire("SIGHTING", f, s)
 end
@@ -110,7 +113,27 @@ end
 -- Units: nameplates, target, mouseover
 ---------------------------------------------------------------------------
 
+-- The creature's model, read from the unit while we can see it, so the
+-- Bestiary can show its portrait later.
+local probe
+local function displayOf(unit)
+	if probe == nil then
+		local ok, m = pcall(CreateFrame, "PlayerModel", nil, UIParent)
+		probe = ok and m or false
+		if probe then
+			probe:SetSize(1, 1)
+			probe:SetAlpha(0)
+		end
+	end
+	if not (probe and probe.GetDisplayInfo) then return nil end
+	if not pcall(probe.SetUnit, probe, unit) then return nil end
+	local ok, id = pcall(probe.GetDisplayInfo, probe)
+	id = ok and ns.Readable(id) or nil
+	return type(id) == "number" and id > 0 and id or nil
+end
+
 function R.Unit(unit, source)
+	R.Watch(unit)
 	if not Readable(UnitExists(unit)) then return end
 	local guid = Readable(UnitGUID(unit))
 	if not guid then return end
@@ -121,8 +144,85 @@ function R.Unit(unit, source)
 	local class = Readable(UnitClassification(unit))
 	if not CLASS_RARE[class or ""] then return end
 	local dead = Readable(UnitIsDead(unit)) and true or false
-	R.Record("rare", id, Readable(UnitName(unit)), nil, dead, source)
+	if ns.Bestiary then ns.Bestiary.Learn(id, Readable(UnitCreatureType and UnitCreatureType(unit)), Readable(UnitLevel(unit))) end
+	R.Record("rare", id, Readable(UnitName(unit)), nil, dead, source, displayOf(unit))
 end
+
+---------------------------------------------------------------------------
+-- Kills. The full combat log is closed to addons on this client, so a kill
+-- is worked out from what can be seen:
+--   * you loot the rare's corpse (only the group that tagged it can), or
+--   * you see it dead, not tapped by someone else, after fighting it
+--     yourself (you were on its threat list) in the last KILL_WINDOW.
+-- A corpse seen tapped by someone else never counts, so skinning another
+-- group's kill doesn't either. Bounties, expeditions and the weekly hunt
+-- ask for kills; the bestiary only needs a sighting.
+---------------------------------------------------------------------------
+local KILL_WINDOW = 900
+local fought, denied, killed = {}, {}, {}
+
+local function rareGuid(unit)
+	if not Readable(UnitExists(unit)) then return nil end
+	local guid = Readable(UnitGUID(unit))
+	if not guid then return nil end
+	local kind, id = guidParts(guid)
+	if kind ~= "Creature" and kind ~= "Vehicle" then return nil end
+	if Readable(UnitIsPlayer(unit)) or Readable(UnitPlayerControlled(unit)) then return nil end
+	if not CLASS_RARE[Readable(UnitClassification(unit)) or ""] then return nil end
+	return guid, id
+end
+
+function R.Kill(guid, id, name, where)
+	if not id or killed[guid] or denied[guid] then return end
+	killed[guid] = true
+	where = where or playerWhere() or {}
+	local zone = where.map and ns.Exploration.ZoneOf(where.map) or where.map
+	local f = ns.db.finds["rare:" .. id]
+	name = name or (f and f.name) or (ns.RareList and ns.RareList[id] and ns.RareList[id][1])
+	ns.Debug("kill", id, name or "?")
+	ns.Ledger.Award("kill", id, { name = name, map = zone, x = where.x, y = where.y })
+	if ns.Work then ns.Work.Check("kill", id, { map = zone, x = where.x, y = where.y }) end
+	ns.Fire("RARE_KILLED", id, name)
+end
+
+-- Looks at a rare unit for a kill: notes when you are fighting it, and
+-- when it lies dead whether you had the right to it.
+function R.Watch(unit)
+	local guid, id = rareGuid(unit)
+	if not guid then return end
+	if UnitIsTapDenied and Readable(UnitIsTapDenied(unit)) then denied[guid] = true end
+	if Readable(UnitIsDead(unit)) then
+		local t = fought[guid]
+		if t and ns.Now() - t <= KILL_WINDOW and not denied[guid] then
+			R.Kill(guid, id, Readable(UnitName(unit)))
+		end
+	elseif UnitThreatSituation and Readable(UnitThreatSituation("player", unit)) ~= nil then
+		fought[guid] = ns.Now()
+	end
+end
+
+-- Looting: every creature the loot came from.
+function R.Loot()
+	if not (GetNumLootItems and GetLootSourceInfo) then return end
+	local seen = {}
+	for slot = 1, GetNumLootItems() or 0 do
+		local sources = { pcall(GetLootSourceInfo, slot) }
+		if sources[1] then
+			for i = 2, #sources, 2 do
+				local guid = Readable(sources[i])
+				if guid and not seen[guid] then
+					seen[guid] = true
+					local kind, id = guidParts(guid)
+					if (kind == "Creature" or kind == "Vehicle") and ns.RareList and ns.RareList[id] then
+						R.Kill(guid, id)
+					end
+				end
+			end
+		end
+	end
+end
+
+local WATCH = { target = true, focus = true, mouseover = true }
 
 ---------------------------------------------------------------------------
 -- Vignettes
@@ -217,6 +317,13 @@ ns.Listen("READY", function()
 	ns.On("UPDATE_MOUSEOVER_UNIT", function()
 		if detect("target") then R.Unit("mouseover", "mouseover") end
 	end)
+	-- Fights and deaths, for kills.
+	local function watch(_, unit)
+		if type(unit) == "string" and (WATCH[unit] or unit:find("^nameplate")) then R.Watch(unit) end
+	end
+	ns.On("UNIT_HEALTH", watch)
+	ns.On("UNIT_THREAT_LIST_UPDATE", watch)
+	ns.On("LOOT_OPENED", function() R.Loot() end)
 	queueScan()
 end)
 
