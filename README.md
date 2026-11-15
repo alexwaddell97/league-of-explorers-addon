@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ko-fi.com/vaxorus"><img src="https://img.shields.io/badge/Support%20League%20of%20Explorers-on%20Ko--fi-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" alt="Support League of Explorers on Ko-fi"></a>
+  <a href="https://ko-fi.com/vaxorus"><img src="https://img.shields.io/badge/Support%20me-on%20Ko--fi-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white" alt="Support me on Ko-fi"></a>
 </p>
 
 # League of Explorers
